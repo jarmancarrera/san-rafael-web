@@ -112,7 +112,7 @@ export function htmlComprobante(r) {
     <section class="comp__bloque comp__lote" aria-labelledby="comp-lote-t">
       <h2 class="comp__sub" id="comp-lote-t">Lote ${esc(l.id)}</h2>
       <div class="comp__figura">${figuraLote(l.puntos, l)}</div>
-      <dl class="comp__lista">${fila('Manzana', l.manzana)}${fila('Superficie', `${uno(l.area_m2)} m² aprox.`)}${fila('Frente × fondo', `${uno(l.frente_m)} × ${uno(l.fondo_m)} m`)}</dl>
+      <dl class="comp__lista">${fila('Superficie', `${uno(l.area_m2)} m² aprox.`)}${fila('Frente × fondo', `${uno(l.frente_m)} × ${uno(l.fondo_m)} m`)}</dl>
     </section>
     <section class="comp__bloque" aria-labelledby="comp-plan-t">
       <h2 class="comp__sub" id="comp-plan-t">Plan de pago</h2>

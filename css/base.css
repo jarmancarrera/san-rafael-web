@@ -159,8 +159,8 @@ html {
   caret-color: var(--foco);
   scrollbar-color: var(--texto-2) var(--fondo);
   scrollbar-width: thin;
-  /* Crossfade de color: la interfaz cambia de hora en 500 ms */
-  transition: background-color var(--dur-tema) var(--curva-claro), color var(--dur-tema) var(--curva-claro);
+  /* Sin transición de color en la raíz: cada hijo la heredaba y la reiniciaba en cada cuadro.
+     El cambio de hora es un solo fundido (View Transition, botones.js). */
 }
 
 body {
@@ -304,4 +304,11 @@ button {
     transition-duration: .01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* Cambio de hora fuera de la portada: un solo fundido de la página (View Transition, botones.js) */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 380ms;
+  animation-timing-function: cubic-bezier(.22, 1, .36, 1);
 }

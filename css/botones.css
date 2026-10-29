@@ -704,6 +704,17 @@
   margin-right: -.16em;
 }
 
+/* Alto y aire solo en principal y secundario; chips, flechas, sol y maqueta conservan su medida */
+:is(.b-claro, .b-linea) {
+  --alto: 48px;
+  padding: 0 28px;
+  font-size: 12px;
+}
+
+@media (max-width: 420px) {
+  :is(.b-claro, .b-linea) { padding: 0 18px; letter-spacing: .12em; }
+}
+
 .estado-lote {
   display: inline-flex;
   align-items: center;
@@ -868,201 +879,136 @@
 }
 
 /* =========================================================================================
-   Piel A · Parcela y cota (elegida por el usuario el 2026-10-29: «PON LOS BOTONES A»).
-   Reemplaza la píldora: el primario es un lote del plano (cuadrilátero con el sesgo real) que al pasar
-   traza su lindero y clava sus cuatro mojones; el secundario es una línea de cota con remates.
-   Mismos nombres de clase y estados; solo cambia la forma.
+   Piel B · Clásico con raya (elegida por el orquestador a pedido del usuario el 2026-10-29:
+   «elige tu uno sobrio, que vaya con el proyecto y personalizalo como propio»).
+   Base del catálogo abierto uiverse.io (MIT): «clásico» de mi-series y «línea guía» de Wlidha09.
+   Firma propia: la raya guía delante del texto y, en el secundario, la abertura del único acceso del lindero.
+   Mismos nombres de clase y estados que siempre.
    ========================================================================================= */
 .b {
   border-radius: 0;
-  text-transform: none;
-  letter-spacing: .04em;
-  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: .16em;
+  /* Press feedback 160 ms (Emil Kowalski) y cambios de color de 220 ms */
+  transition:
+    color 220ms var(--curva-salida),
+    background-color 220ms var(--curva-salida),
+    border-color 220ms var(--curva-salida),
+    scale 160ms ease-out,
+    translate var(--dur-arco) var(--curva-resorte);
 }
 
 .b__txt {
-  margin-right: 0;
+  margin-right: -.16em;
 }
 
-/* El sol de «cargando» recorre el contorno recto */
 :is(.b, .barra-lotes)[data-estado="cargando"]::after {
   offset-path: inset(var(--sol-dentro, 5px));
 }
 
-/* B1 · parcela. El relleno vive en ::before con la forma del lote; el lindero y los mojones los pone botones.js */
-.b-claro {
-  --parcela: polygon(1.5% 9%, 100% 0, 97.5% 100%, 0 90%);
-  --parcela-recta: polygon(0 4%, 100% 0, 100% 100%, 0 96%);
-  padding: 0 28px;
-  border-color: transparent;
-  background-color: transparent;
-  overflow: visible;
-}
-
-.b-claro::before {
-  inset: 0;
-  left: 0;
-  top: 0;
-  width: auto;
+/* La raya guía: 0 px en reposo, 18 px al pasar o enfocar (Line drawing, 220 ms) */
+:is(.b-claro, .b-linea)::before {
+  content: "";
+  position: static;
+  inset: auto;
+  z-index: auto;
+  flex: none;
+  width: 0;
+  height: 1px;
+  margin-right: -12px;
   aspect-ratio: auto;
+  border: 0;
   border-radius: 0;
   translate: none;
   scale: 1;
+  clip-path: none;
+  background: currentColor;
+  transition: width 220ms var(--curva-salida), margin-right 220ms var(--curva-salida);
+}
+
+:is(.b-claro, .b-linea):is(:hover, :focus-visible, [data-forzar~="hover"], [data-forzar~="foco"]):not([aria-disabled="true"], [data-estado])::before {
+  width: 18px;
+  margin-right: 0;
+}
+
+@media (hover: none) {
+  :is(.b-claro, .b-linea):hover:not(:focus-visible, [data-forzar])::before { width: 0; margin-right: -12px; }
+}
+
+/* B1 · principal: rectángulo lleno */
+.b-claro {
   background-color: var(--accion);
-  clip-path: var(--parcela);
-  transition: clip-path 500ms var(--curva-claro), background-color var(--dur-tema) var(--curva-claro);
+  border: 1px solid var(--accion);
+  color: var(--accion-texto);
+  overflow: visible;
 }
 
 .b-claro:is(:hover, :active, [data-forzar~="hover"], [data-forzar~="presionado"]):not([aria-disabled="true"], [data-estado]) {
+  background-color: color-mix(in srgb, var(--accion) 86%, var(--accion-texto));
+  border-color: color-mix(in srgb, var(--accion) 86%, var(--accion-texto));
   color: var(--accion-texto);
 }
 
-.b-claro:is(:hover, :active, [data-forzar~="hover"], [data-forzar~="presionado"]):not([aria-disabled="true"], [data-estado])::before {
-  clip-path: var(--parcela-recta);
-}
-
-.b-claro:is(:active, [data-forzar~="presionado"]):not([aria-disabled="true"], [data-estado])::before {
-  clip-path: polygon(2% 12%, 98% 4%, 96% 96%, 1% 88%);
-}
-
 .b-claro[data-estado="exito"] {
-  background-color: transparent;
-  border-color: transparent;
-}
-
-.b-claro[data-estado="exito"]::before {
   background-color: var(--exito-claro);
+  border-color: var(--exito-claro);
 }
 
 .b-claro:is([aria-disabled="true"], :disabled) {
+  background-color: transparent;
   border: 1px dashed var(--trazo);
-}
-
-/* Lindero (Line drawing, 600 ms) y mojones (Pop in escalonado, 120 ms) */
-.parcela-borde {
-  position: absolute;
-  z-index: -2;
-  inset: -6px;
-  pointer-events: none;
-}
-
-.parcela-borde svg {
-  display: block;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-}
-
-.parcela-borde polygon {
-  fill: none;
-  stroke: var(--madera);
-  stroke-width: 1;
-  vector-effect: non-scaling-stroke;
-  stroke-dasharray: 1;
-  stroke-dashoffset: 1;
-  transition: stroke-dashoffset 600ms var(--curva-claro);
-}
-
-.parcela-borde i {
-  position: absolute;
-  width: 5px;
-  height: 5px;
-  background-color: var(--madera);
-  translate: -50% -50%;
-  scale: 0;
-  transition: scale 300ms var(--curva-resorte);
-}
-
-.parcela-borde i:nth-of-type(1) { left: 1.5%; top: 9%; }
-.parcela-borde i:nth-of-type(2) { left: 100%; top: 0; transition-delay: 120ms; }
-.parcela-borde i:nth-of-type(3) { left: 97.5%; top: 100%; transition-delay: 240ms; }
-.parcela-borde i:nth-of-type(4) { left: 0; top: 90%; transition-delay: 360ms; }
-
-.b-claro:is(:hover, :focus-visible, [data-forzar~="hover"], [data-forzar~="foco"]):not([aria-disabled="true"], [data-estado]) .parcela-borde polygon {
-  stroke-dashoffset: 0;
-}
-
-.b-claro:is(:hover, :focus-visible, [data-forzar~="hover"], [data-forzar~="foco"]):not([aria-disabled="true"], [data-estado]) .parcela-borde i {
-  scale: 1;
-}
-
-/* B2 · cota. Línea de dimensión con remates bajo el texto; al pasar, la cota se abre a todo el ancho */
-.b-linea {
-  padding: 0 2px 10px;
-  border-color: transparent;
   color: var(--trazo);
-  overflow: visible;
 }
 
-.b-linea::before {
-  inset: auto 0 9px 0;
-  height: 9px;
-  border-left: 1px solid currentColor;
-  border-right: 1px solid currentColor;
-  background: linear-gradient(currentColor, currentColor) center / 100% 1px no-repeat;
-  clip-path: none;
-  scale: .86 1;
-  transition: scale 450ms var(--curva-claro), color var(--dur-tema) var(--curva-claro);
+/* B2 · secundario: contorno de 1 px con la abertura del acceso arriba (12 px al 22 % del ancho) */
+.b-linea {
+  --l: var(--trazo);
+  border: 0;
+  overflow: visible;
+  color: var(--trazo);
+  background:
+    linear-gradient(var(--l), var(--l)) 0 0 / 22% 1px no-repeat,
+    linear-gradient(var(--l), var(--l)) 100% 0 / calc(78% - 12px) 1px no-repeat,
+    linear-gradient(var(--l), var(--l)) 0 100% / 100% 1px no-repeat,
+    linear-gradient(var(--l), var(--l)) 0 0 / 1px 100% no-repeat,
+    linear-gradient(var(--l), var(--l)) 100% 0 / 1px 100% no-repeat;
 }
 
 .b-linea:is(:hover, :active, [data-forzar~="hover"], [data-forzar~="presionado"]):not([aria-disabled="true"], [data-estado]) {
-  color: var(--trazo);
-}
-
-.b-linea:is(:hover, :active, [data-forzar~="hover"], [data-forzar~="presionado"]):not([aria-disabled="true"], [data-estado])::before {
-  clip-path: none;
-  scale: 1 1;
-  color: var(--madera);
+  background-color: var(--trazo);
+  color: var(--trazo-relleno-texto);
 }
 
 .b-linea[data-estado="exito"] {
-  padding: 0 18px;
+  background-color: var(--exito);
+  color: var(--exito-texto);
 }
 
 .b-linea:is([aria-disabled="true"], :disabled) {
-  border-color: transparent;
-  text-decoration: line-through 1px;
+  --l: var(--linea);
 }
 
-/* B3 · manzana. Parcela pequeña: la caja se sesga como un lote; el texto y el punto vuelven a su eje */
+/* B3 · chip: rectángulo pequeño de 1 px; activo, lleno */
 .b-chip {
   border-radius: 0;
-  transform: skewX(-8deg);
-  text-transform: uppercase;
-  letter-spacing: .1em;
-  font-size: 12px;
-}
-
-.b-chip > :is(.b__txt, .punto) {
-  transform: skewX(8deg);
+  letter-spacing: .12em;
+  font-size: 11px;
 }
 
 .b-chip::before {
   border-radius: 0;
 }
 
-/* B5 · flecha. Parcela cuadrada sesgada en vez de círculo */
+/* B5 · flecha y B6 · maqueta: cuadrados, sin círculos */
 .b-flecha,
-.b-flecha--chica::before {
-  border-radius: 0;
-}
-
-.b-flecha {
-  transform: skewX(-8deg);
-}
-
-.b-flecha > .ico {
-  transform: skewX(8deg);
-}
-
-/* B4 · la hora del sol y B6 · puerta a la maqueta: sin píldora */
+.b-flecha--chica::before,
 .b-sol__hora,
 .b-maqueta,
 .b-maqueta * {
   border-radius: 0;
 }
 
-/* B7 · barra de lotes: un cajetín de lámina, recto y de 1 px */
+/* B7 · barra de lotes: cajetín recto de 1 px */
 .barra-lotes,
 .barra-lotes__lote {
   border-radius: 0;

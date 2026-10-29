@@ -20,6 +20,15 @@
   text-transform: uppercase;
 }
 
+/* La nota va en --texto: a 10.5 px, --texto-2 no llega a AA de día (DESIGN.md §2) */
+:is(.cab, .reserva-pag, .comprobante-pag) .nota-demo {
+  color: var(--texto);
+}
+
+.reserva-pag {
+  --nav-alto: 64px;
+}
+
 body {
   background-color: var(--fondo);
   color: var(--texto);
@@ -68,8 +77,19 @@ body {
   text-align: right;
 }
 
+/* En móvil la nota baja a su propia fila: no cabe junto a la marca y el sol */
 @media (max-width: 599.98px) {
-  .cab__demo { max-width: 15ch; }
+  .cab {
+    flex-wrap: wrap;
+    row-gap: 0;
+  }
+
+  .cab__demo {
+    order: 3;
+    flex-basis: 100%;
+    padding: 0 0 10px;
+    text-align: left;
+  }
 }
 
 /* ---------- Página de reserva ---------- */
@@ -184,6 +204,7 @@ body {
   display: grid;
   gap: 32px;
   align-items: start;
+  scroll-margin-top: 96px; /* al cambiar de paso, el título queda bajo la cabecera fija, no detrás */
 }
 
 .reserva-pag__rejilla[hidden] {
@@ -209,9 +230,9 @@ body {
   margin: 0 0 12px;
   font-family: var(--f-titulo);
   font-weight: 300;
-  font-size: clamp(26px, 3vw, 40px);
-  line-height: 1.1;
-  letter-spacing: .06em;
+  font-size: clamp(22px, 2.2vw, 30px);
+  line-height: 1.15;
+  letter-spacing: .08em;
   text-transform: uppercase;
   color: var(--trazo);
   scroll-margin-top: 96px;
@@ -541,6 +562,18 @@ body {
   overflow-wrap: anywhere;
 }
 
+/* En móvil, rótulo arriba y valor abajo: un correo largo no se parte en pedazos */
+@media (max-width: 599.98px) {
+  .pasarela__datos > div {
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .pasarela__datos dd {
+    text-align: left;
+  }
+}
+
 .pasarela__nota {
   margin: 20px 0 0;
 }
@@ -692,7 +725,7 @@ body {
     flex-direction: column-reverse;
     padding: 8px var(--margen) calc(8px + env(safe-area-inset-bottom, 0px));
     border-top: 1px solid var(--linea);
-    background-color: var(--velo);
+    background-color: var(--fondo); /* opaco: el texto de abajo no se lee a través de la barra */
     box-shadow: var(--sombra);
   }
 
@@ -805,9 +838,11 @@ body {
   font-size: 15px;
 }
 
+/* El valor no se encoge: un monto nunca se parte; si es muy largo (un correo), se corta dentro del 65 % */
 .comp dd {
+  flex-shrink: 0;
+  max-width: 65%;
   margin: 0;
-  min-width: 0;
   text-align: right;
   font-weight: 500;
   font-variant-numeric: tabular-nums;

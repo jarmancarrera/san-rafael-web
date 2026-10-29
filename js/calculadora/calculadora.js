@@ -11,6 +11,7 @@ export const fmt = (n) => moneda.format(n)
 const num = new Intl.NumberFormat('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format
 const pctTexto = (n) => `${n.toLocaleString('es-GT', { maximumFractionDigits: 1 })} %`
 const cent = (n) => Math.round(n * 100)
+const campoNum = (n) => String(Math.round(n * 100) / 100) // valor de un input numérico: 321800 o 67578.5, sin ceros de sobra
 
 // Respaldo literal de los marcadores (contrato de la bitácora); precios.json manda si los trae.
 export const MARCADORES = { lote: 'Q XXX,XXX', m2: 'Q X,XXX/m²', reserva: 'Q Y,YYY', enganche: 'XX %', cuota: 'Q Z,ZZZ/mes' }
@@ -264,7 +265,7 @@ export function montarCalculadora(raiz, { precios: c, lote: loteInicial = null, 
 
   function pintarEnganche() {
     const p = precio.valueAsNumber
-    if (simulado && p > 0) monto.value = (cent((p * pct) / 100) / 100).toFixed(2)
+    if (simulado && p > 0) monto.value = campoNum(cent((p * pct) / 100) / 100)
     rango.value = pct
     rango.parentElement.style.setProperty('--p', ((acotar(pct, minimo, maximo) - minimo) / (maximo - minimo)).toFixed(4))
     $('[data-cal=pct]').textContent = pctTexto(Math.round(pct * 10) / 10)
@@ -294,7 +295,7 @@ export function montarCalculadora(raiz, { precios: c, lote: loteInicial = null, 
     if (simulado) return
     simulado = true
     f.dataset.simulado = 'si'
-    if (!(precio.valueAsNumber > 0)) precio.value = ((lote ? cent(lote.area_m2 * c.precio_m2) : cent(area * c.precio_m2)) / 100).toFixed(2)
+    if (!(precio.valueAsNumber > 0)) precio.value = campoNum((lote ? lote.area_m2 : area) * c.precio_m2)
     pintarEnganche()
     notaPrecio()
   }
@@ -503,7 +504,7 @@ export function montarCalculadora(raiz, { precios: c, lote: loteInicial = null, 
     const a = Number(d?.area_m2)
     if (!/^[A-K]-\d{2}$/.test(id) || !(a > 0)) return
     lote = { id, area_m2: a }
-    precio.value = (cent(a * c.precio_m2) / 100).toFixed(2)
+    precio.value = campoNum(a * c.precio_m2)
     simular()
     notaPrecio()
     pintarEnganche()

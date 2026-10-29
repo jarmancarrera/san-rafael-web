@@ -129,13 +129,37 @@
     if (avisar) dispatchEvent(new CustomEvent('modo:cambiado', { detail: { modo } }));
   }
 
-  async function alternarModo(b) {
+  // El botón responde en el mismo cuadro; la página cambia de hora en el siguiente. Al cambiar el modo,
+  // cerca de 185 elementos arrancaban una transición de color y el teléfono repintaba la página 5 o 6 cuadros
+  // seguidos (medido a CPU 6x en 390). Se terminan al instante y el cambio es un solo fundido de página
+  // (View Transition) fuera de la portada; en la portada el fundido lo hace la disolución del claro.
+  // Un hijo que hereda el color arranca otra transición cuando su padre termina: se repite hasta que no quede ninguna.
+  function terminarTransiciones() {
+    for (let vuelta = 0; vuelta < 4; vuelta++) {
+      const vivas = document.getAnimations().filter((a) => a instanceof CSSTransition && a.effect && a.effect.target && !a.effect.target.closest('.b-sol'));
+      if (!vivas.length) return;
+      vivas.forEach((a) => a.finish());
+    }
+  }
+
+  function alternarModo(b) {
     if (b.dataset.estado === 'cargando') return;
-    ponerModo(raiz.dataset.modo === 'noche' ? 'dia' : 'noche');
-    decir(raiz.dataset.modo === 'noche' ? 'Modo noche' : 'Modo día');
+    const nuevo = raiz.dataset.modo === 'noche' ? 'dia' : 'noche';
+    document.querySelectorAll('.b-sol[data-control-modo]').forEach((x) => x.setAttribute('aria-checked', String(nuevo === 'noche')));
     estado(b, 'exito');
     clearTimeout(b._fin);
     b._fin = setTimeout(() => estado(b, null), 1600);
+    const aplicar = () => {
+      ponerModo(nuevo);
+      terminarTransiciones();
+      decir(nuevo === 'noche' ? 'Modo noche' : 'Modo día');
+    };
+    const umbral = document.getElementById('umbral');
+    const enPortada = umbral && umbral.getBoundingClientRect().bottom > innerHeight * .5;
+    requestAnimationFrame(() => setTimeout(() => {
+      if (document.startViewTransition && !reducido.matches && !enPortada) document.startViewTransition(aplicar);
+      else aplicar();
+    }, 0));
   }
 
   /* ---------- B7: barra de lotes (Direction-aware transition) ---------- */
@@ -201,19 +225,6 @@
     pintarHora();
     setInterval(pintarHora, 30000);
   }
-
-  /* Piel A · parcela: cada .b-claro lleva su lindero y sus cuatro mojones (también los que se crean después) */
-  const PARCELA = '<span class="parcela-borde" aria-hidden="true"><svg viewBox="0 0 100 100" preserveAspectRatio="none" focusable="false"><polygon pathLength="1" points="1.5,9 100,0 97.5,100 0,90"/></svg><i></i><i></i><i></i><i></i></span>';
-  const vestir = (n) => {
-    if (n.nodeType !== 1) return;
-    const bs = n.matches('.b-claro') ? [n] : n.querySelectorAll('.b-claro');
-    bs.forEach((b) => { if (!b.querySelector(':scope > .parcela-borde')) b.insertAdjacentHTML('beforeend', PARCELA); });
-  };
-  const vestirTodo = () => {
-    vestir(document.body);
-    new MutationObserver((ms) => ms.forEach((m) => m.addedNodes.forEach(vestir))).observe(document.body, { childList: true, subtree: true });
-  };
-  if (document.body) vestirTodo(); else document.addEventListener('DOMContentLoaded', vestirTodo);
 
   window.SRBotones = { estado, ponerModo, horaPaxcaman, solPaxcaman };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', iniciar);

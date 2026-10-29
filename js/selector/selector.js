@@ -44,10 +44,10 @@ const ICONO = {
 };
 
 function plantilla(manzanas, opciones) {
-  const chip = (mz, texto, pulsado) => `<button class="b b-chip" type="button" aria-pressed="${pulsado}" data-mz="${mz}"${mz ? ` aria-label="Manzana ${mz}"` : ''} tabindex="${pulsado ? 0 : -1}"><span class="punto" aria-hidden="true"></span><span class="b__txt">${texto}</span></button>`;
+  const chip = (mz, texto, pulsado) => `<button class="b b-chip" type="button" aria-pressed="${pulsado}" data-mz="${mz}"${mz ? ` aria-label="Lotes ${mz}"` : ''} tabindex="${pulsado ? 0 : -1}"><span class="punto" aria-hidden="true"></span><span class="b__txt">${texto}</span></button>`;
   return `
 <div class="sel__lista">
-  <div class="sel__filtros" role="group" aria-label="Filtrar por manzana">${chip('', 'Todas', true)}${manzanas.map((m) => chip(m, m, false)).join('')}</div>
+  <div class="sel__filtros" role="group" aria-label="Filtrar lotes por letra">${chip('', 'Todas', true)}${manzanas.map((m) => chip(m, m, false)).join('')}</div>
   <div class="sel__buscar">${ICONO.buscar}
     <label class="sr-solo" for="sel-buscar">Buscar lote por número</label>
     <input class="sel__campo" id="sel-buscar" type="search" placeholder="Buscar lote, p. ej. C-04" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="search" aria-controls="sel-opciones" aria-describedby="sel-cuenta">
@@ -79,7 +79,7 @@ function plantilla(manzanas, opciones) {
   <p class="sel__aviso" aria-hidden="true">${MAC ? '⌘' : 'Ctrl'} + rueda para acercar</p>
   <p class="sel__globo" aria-hidden="true"></p>
 </figure>
-  <div class="barra-lotes sel__barra" role="group" aria-label="Recorrer lotes de la manzana A">
+  <div class="barra-lotes sel__barra" role="group" aria-label="Recorrer lotes A">
     <button class="b b-flecha b-flecha--chica b-flecha--atras" type="button" aria-label="Lote anterior" data-paso="-1"><span class="ico ico--flecha" aria-hidden="true"></span></button>
     <button class="barra-lotes__lote" type="button" aria-describedby="sel-barra-area"><span class="b__txt" data-b="lote">Lote A-01</span></button>
     <span class="sr-solo" id="sel-barra-area" data-b="area"></span>
@@ -91,7 +91,7 @@ function plantilla(manzanas, opciones) {
   <button class="sel__asa" type="button" aria-label="Cerrar ficha"><i></i></button>
   <div class="sel__ficha-vacia">
     <h3 class="sel__ficha-titulo sel__ficha-titulo--vacia">Ningún lote elegido</h3>
-    <p class="sel__ficha-txt">Toque un lote en el render, búsquelo en la lista o recorra su manzana con la barra bajo el render.</p>
+    <p class="sel__ficha-txt">Toque un lote en el render, búsquelo en la lista o recorra los lotes vecinos con la barra bajo el render.</p>
     <ul class="sel__leyenda">
       <li data-estado-lote="disponible"><span class="punto" aria-hidden="true"></span>Disponibles<b data-cuenta="disponible"></b></li>
       <li data-estado-lote="reservado"><span class="punto" aria-hidden="true"></span>Reservados<b data-cuenta="reservado"></b></li>
@@ -104,7 +104,7 @@ function plantilla(manzanas, opciones) {
       <h3 class="sel__ficha-titulo" data-f="titulo">Lote</h3>
       <button class="b b-flecha b-flecha--chica sel__cerrar" type="button" aria-label="Cerrar ficha"><span class="ico ico--cerrar" aria-hidden="true"></span></button>
     </div>
-    <p class="sel__ficha-meta"><span class="estado-lote" data-f="estado-caja"><span class="punto" aria-hidden="true"></span><span data-f="estado">Disponible</span></span><span data-f="mz">Manzana</span></p>
+    <p class="sel__ficha-meta"><span class="estado-lote" data-f="estado-caja"><span class="punto" aria-hidden="true"></span><span data-f="estado">Disponible</span></span><span data-f="mz"></span></p>
     <dl class="sel__datos">
       <div><dt>Superficie</dt><dd data-f="area"></dd></div>
       <div><dt>Frente × fondo</dt><dd data-f="medidas"></dd></div>
@@ -277,9 +277,9 @@ export async function montar(raiz) {
       c.setAttribute('aria-pressed', String(si));
       c.tabIndex = si ? 0 : -1;
     }
-    cuenta.textContent = q ? `${n} ${n === 1 ? 'lote' : 'lotes'} para «${q.trim()}»` : mz ? `${n} lotes · manzana ${mz}` : `${n} lotes`;
+    cuenta.textContent = q ? `${n} ${n === 1 ? 'lote' : 'lotes'} para «${q.trim()}»` : mz ? `${n} lotes · ${mz}` : `${n} lotes`;
     vacio.hidden = n > 0;
-    if (!n) vacio.textContent = `Ningún lote coincide con «${q.trim()}». Escriba la manzana y el número, por ejemplo C-04.`;
+    if (!n) vacio.textContent = `Ningún lote coincide con «${q.trim()}». Escriba la letra y el número, por ejemplo C-04.`;
     if (activo?.hidden) activar(null);
     lista.scrollTop = 0;
     if (!elegido && mz) { cursor = porMz.get(mz)[0]; pintarBarra(cursor); }
@@ -373,7 +373,7 @@ export async function montar(raiz) {
     if (!id) return;
     const m = info.get(id), e = estadoDe(id);
     f('titulo').textContent = `Lote ${id}`;
-    f('mz').textContent = `Manzana ${m.manzana}`;
+    f('mz').textContent = '';
     f('estado-caja').dataset.estadoLote = e;
     f('estado').textContent = NOMBRE[e];
     f('area').textContent = `${uno(m.area_m2)} m² aprox.`;
@@ -448,7 +448,7 @@ export async function montar(raiz) {
     b('area').textContent = `${uno(m.area_m2)} m² aprox.`;
     b('estado').textContent = NOMBRE[e];
     b('estado').parentElement.dataset.estadoLote = e;
-    barra.setAttribute('aria-label', `Recorrer lotes de la manzana ${id[0]}`);
+    barra.setAttribute('aria-label', `Recorrer lotes ${id[0]}`);
     if (dir) {
       bLote.classList.remove('entra-der', 'entra-izq');
       void bLote.offsetWidth;   // Direction-aware transition (botones.css)

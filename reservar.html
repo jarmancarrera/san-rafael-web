@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
 <title>Reservar su lote · Condominio San Rafael</title>
 <meta name="description" content="Reserve su lote en Condominio San Rafael, Paxcamán, en cinco pasos: lote, plan de pago, datos, pago y comprobante. Precios y pago de demostración.">
 <meta name="robots" content="noindex">
@@ -59,7 +60,6 @@
           <div class="ficha-lote__figura" data-figura></div>
           <dl class="lista">
             <div><dt>Lote</dt><dd data-l="id"></dd></div>
-            <div><dt>Manzana</dt><dd data-l="manzana"></dd></div>
             <div><dt>Superficie</dt><dd><span data-l="area"></span> aprox.</dd></div>
             <div><dt>Frente × fondo</dt><dd data-l="medidas"></dd></div>
             <div><dt>Precio</dt><dd>Q XXX,XXX</dd></div>
@@ -71,7 +71,7 @@
           <select class="campo__select" id="r-lote" name="lote" aria-describedby="r-lote-nota r-lote-error">
             <option value="">Elija un lote</option>
           </select>
-          <p class="campo__nota" id="r-lote-nota">Los 145 lotes del plan maestro, por manzana. Superficie aprox., medida sobre el plano.</p>
+          <p class="campo__nota" id="r-lote-nota">Los 145 lotes del plan maestro, en orden de código. Superficie aprox., medida sobre el plano.</p>
           <p class="campo__error" id="r-lote-error" data-error="lote"></p>
         </div>
         <div class="paso__acciones">

@@ -9,7 +9,8 @@
    Ramas de gsap.matchMedia(): escritorio, movil y reducido. Lenis solo con (hover:hover) and (min-width:900px).
    Cada tween o tramo lleva su nombre de animation-vocabulary en el comentario.
 
-   API: window.SRPagina = { listo: Promise, lote(): id del lote del cierre }.
+   API: window.SRPagina = { listo: Promise, lote(): id del lote del cierre,
+        obertura: { estado: pendiente|corriendo|pausa|hecha, inicio, fin (performance.now), duracion (s), adelantada, pausada } }.
    Escucha en window: lote:seleccionado {id, ...} y lote:deseleccionado {}. */
 (() => {
   'use strict';
@@ -130,12 +131,22 @@
   const estado = { lote: LOTE_INICIAL };
   window.SRPagina = { listo, lote: () => estado.lote };
 
-  /* ---------- Fotos del aéreo del claro: se piden después del dosel (no compiten con el LCP) ---------- */
+  /* ---------- Fotos del aéreo del claro: se piden después del dosel (no compiten con el LCP) ----------
+     En móvil, las de 1200 px (dia-1200.webp: 202 KB contra 521 KB). fotoClaro se resuelve cuando la foto del
+     modo actual está decodificada: la obertura la espera antes de abrir el claro. */
+  let fotoLista = () => {};
+  const fotoClaro = new Promise((ok) => { fotoLista = ok; });
   function cargarAereos() {
     const modo = raiz.dataset.modo === 'noche' ? 'noche' : 'dia';
     const primero = (img) => (img.classList.contains(`aereo--${modo}`) ? 0 : 1);
     const imgs = $$('.lienzo__fotos--claro [data-src]').sort((a, b) => primero(a) - primero(b));
-    imgs.forEach((img, i) => setTimeout(() => { img.src = img.dataset.src; img.removeAttribute('data-src'); }, i * 400));
+    const chica = innerWidth < 900;
+    if (!imgs.length) fotoLista();
+    imgs.forEach((img, i) => setTimeout(() => {
+      img.src = chica ? img.dataset.src.replace(/\.webp$/, '-1200.webp') : img.dataset.src;
+      img.removeAttribute('data-src');
+      if (i === 0) img.decode().catch(() => {}).then(fotoLista);
+    }, i * 400));
   }
   const dosel = $('.vuelo .escena__dosel');
   if (dosel && !dosel.complete) {
@@ -309,8 +320,21 @@
     f.addEventListener('focus', () => marcarZona(f.dataset.zona));
     f.addEventListener('click', () => marcarZona(f.classList.contains('on') ? '' : f.dataset.zona));
   });
-  $('.areas')?.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') marcarZona(''); });
-  $('.areas')?.addEventListener('focusout', (e) => { if (!e.currentTarget.contains(e.relatedTarget)) marcarZona(''); });
+  $('.areas')?.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') marcarZona(pasoActivo); });
+  $('.areas')?.addEventListener('focusout', (e) => { if (!e.currentTarget.contains(e.relatedTarget)) marcarZona(pasoActivo); });
+
+  // Recorrido: el paso que cruza la franja media de la pantalla ilumina su zona (Scroll-triggered highlight)
+  let pasoActivo = 'acceso';
+  const pasos = $$('.paso');
+  if (pasos.length && 'IntersectionObserver' in window) {
+    const io = new IntersectionObserver((es) => es.forEach((e) => {
+      if (!e.isIntersecting) return;
+      pasoActivo = e.target.dataset.zona;
+      pasos.forEach((p) => p.classList.toggle('es-activo', p === e.target));
+      marcarZona(pasoActivo);
+    }), { rootMargin: '-50% 0px -35% 0px' });
+    pasos.forEach((p) => io.observe(p));
+  }
 
   /* ---------- Pilares: Hover-activated list (escritorio) y acordeón de una línea (móvil) ---------- */
   const pilares = $$('.pilar');
@@ -344,17 +368,26 @@
   }
 
   /* =========================================================================================
-     El claro se abre
+     El claro se abre (ANALISIS Zacamil, versión a)
+     1. Obertura de ~4 s (3 s en móvil) que corre sola desde que el dosel está decodificado: las letras del
+        logo suben, el isotipo viaja a la barra, el lindero se traza sobre el dosel, el claro se abre en su sitio
+        con la imagen virada que toma color y el título entra por los lados. Termina en el estado que antes daba
+        el scroll al final del umbral. Cualquier gesto la adelanta (timeScale 4).
+     2. Después, el scroll (claro.p de 0 a 1): el claro se abre a toda la pantalla y Ken Burns hacia el parque.
+     Cada propiedad compartida se pinta como obertura × scroll, así nunca se pisan.
      ========================================================================================= */
   const vuelo = $('#vuelo');
+  const reducidoMQ = matchMedia('(prefers-reduced-motion: reduce)');
   const claro = {
     lienzo: $('[data-lienzo="claro"]'),
     mascara: $('.mascara-claro__forma'),
     trazo: $('.lindero-trazo'),
+    fotos: $('.lienzo__fotos--claro'),
+    aereos: $$('.lienzo__fotos--claro .aereo'),
+    noche: $('.lienzo__fotos--claro .aereo--noche'),
     iso: $('.umbral__iso'),
     palabra: $('.umbral__palabra'),
     marcaU: $('.umbral__marca'),
-    linea: $('.umbral__linea'),
     guia: $('.umbral__guia'),
     anillo: $('.umbral__anillo'),
     texto: $('.claro__texto'),
@@ -363,8 +396,36 @@
     navIso: $('.nav__marca .marca-h__iso'),
     navPalabra: $('.nav__marca .marca-h__palabra'),
     geo: null,
+    flip: null,
+    cam: null,
+    par: { x: 0, y: 0 }, // parallax del puntero, de -1 a 1
     p: 0,
   };
+
+  // Estado de la obertura. Los valores de reposo son los del final: así el salto, el modo reducido y un
+  // matchMedia que se revierte dejan la portada completa.
+  const ob = { dosel: 1, trazo: 1, flip: 1, palabra: 0, navPalabra: 1, k: 1, foto: 1, color: 1, nota: 1, guia: 1 };
+  const info = { estado: 'pendiente', inicio: 0, fin: 0, duracion: 0, adelantada: false, pausada: false };
+  window.SRPagina.obertura = info;
+  // Si este script llega tarde (el respaldo CSS ya mostró la portada a los 3.5 s), no hay obertura
+  const conObertura = !reducidoMQ.matches && performance.now() < 3200;
+  if (conObertura) raiz.classList.add('obertura');
+  else raiz.classList.add('obertura-hecha');
+  if (!conObertura) info.estado = 'hecha';
+  const espera = (ms) => new Promise((ok) => setTimeout(ok, ms));
+  // «Invisible» es .001 y no 0: Chrome cuenta para el LCP el primer cuadro con opacidad > 0. Así el texto del claro
+  // se registra al pintarse (primer cuadro) y no cuando la obertura lo revela segundos después.
+  const OCULTO = .001;
+  const doselListo = Promise.race([dosel ? dosel.decode().catch(() => {}) : null, espera(2500)]);
+  let fotoOk = false;
+  fotoClaro.then(() => { fotoOk = true; });
+  listo.catch(() => {
+    // Sin datos no hay claro: la marca pasa a la barra y el texto queda visible
+    raiz.classList.remove('obertura');
+    raiz.classList.add('obertura-hecha');
+    claro.marcaU.style.visibility = 'hidden';
+    [claro.navIso, claro.navPalabra].forEach((el) => { el.style.opacity = '1'; });
+  });
 
   // FLIP del isotipo: First (centro, grande) → Last (esquina de la barra). Medidas sin transform (offset*).
   function medirFlip() {
@@ -384,71 +445,254 @@
     const fit = encuadrar(W, H, b, esc ? { cx: .62, cy: .52, fw: .4, fh: .8 } : { cx: .5, cy: .33, fw: .84, fh: .43 });
     const parque = datos.parques.length ? centroide(datos.parques.reduce((a, p) => (area(p) > area(a) ? p : a))) : c;
     const kb = acercar(ancho, W, H, parque, 1.18);
-    const total = vuelo.offsetHeight - H;
-    const u = lim($('#umbral').offsetHeight / Math.max(1, total), .2, .8);
-    return { pts, c, ancho, fit, kb, k: alcance(pts, c, ancho, W, H), u, flip: medirFlip() };
+    return { pts, c, ancho, fit, kb, k: alcance(pts, c, ancho, W, H) };
   }
 
   function prepararClaro(esc) {
     claro.geo = geoClaro(esc);
-    claro.mascara.setAttribute('d', ruta(claro.geo.pts));
-    claro.trazo.setAttribute('d', ruta(claro.geo.pts));
-    pintarClaro(claro.p);
+    claro.flip = medirFlip();
+    const { pts } = claro.geo;
+    claro.mascara.setAttribute('d', ruta(pts));
+    claro.trazo.setAttribute('d', ruta(pts));
+    pintarClaro();
   }
 
-  function pintarClaro(p) {
+  // Cámara del lienzo y dosel, con el parallax del puntero (lienzo ±6 px, dosel ±12 px, en sentidos opuestos)
+  function pintarCamara() {
+    const { x, y } = claro.par;
+    if (claro.cam) ponerCamara(claro.lienzo, { x: claro.cam.x + x * 6, y: claro.cam.y + y * 6, s: claro.cam.s });
+    if (dosel) dosel.style.transform = `translate3d(${(-x * 12).toFixed(2)}px, ${(-y * 12).toFixed(2)}px, 0) scale(${ob.dosel.toFixed(4)})`;
+  }
+
+  function pintarClaro(p = claro.p) {
     claro.p = p;
-    const g = claro.geo;
-    if (!g) return;
-    const { u } = g;
-    const despues = 1 - u;
-    const fin = {
-      flip: u * .92,
-      retiene: u + despues * .24,
-      textoFuera: u + despues * .32,
-      abre: [u + despues * .26, u + despues * .66],
-    };
 
-    // Umbral: la línea y la guía se apagan al primer gesto (Fade out)
-    const fuera = 1 - tramo(p, 0, .05);
-    claro.linea.style.opacity = fuera.toFixed(3);
-    claro.guia.style.opacity = fuera.toFixed(3);
-    if (claro.anillo && p > .01) claro.anillo.style.visibility = 'hidden';
-
-    // Shared element transition (FLIP) del isotipo hacia la barra; la palabra hace Crossfade
-    const f = suave(tramo(p, .02, fin.flip));
-    const { dx, dy, s } = g.flip;
-    claro.iso.style.transform = `translate3d(${(dx * f).toFixed(2)}px, ${(dy * f).toFixed(2)}px, 0) scale(${mezcla(1, s, f).toFixed(4)})`;
-    const llego = p >= fin.flip;
+    // Marca: Shared element transition (FLIP) del isotipo hacia la barra; la palabra hace Crossfade (solo obertura)
+    const f = ob.flip;
+    if (claro.flip) {
+      const { dx, dy, s } = claro.flip;
+      claro.iso.style.transform = `translate3d(${(dx * f).toFixed(2)}px, ${(dy * f).toFixed(2)}px, 0) scale(${mezcla(1, s, f).toFixed(4)})`;
+    }
+    const llego = f >= 1;
     claro.iso.style.opacity = llego ? '0' : '1';
     claro.navIso.style.opacity = llego ? '1' : '0';
-    claro.palabra.style.opacity = (1 - tramo(p, .02, u * .34)).toFixed(3);
-    claro.palabra.style.transform = `scale(${mezcla(1, .94, tramo(p, .02, u * .34)).toFixed(4)})`;
-    claro.navPalabra.style.opacity = tramo(p, u * .6, fin.flip).toFixed(3);
-    claro.marcaU.style.visibility = p >= 1 ? 'hidden' : 'visible';
+    if (claro.anillo && f > 0) claro.anillo.style.visibility = 'hidden';
+    claro.palabra.style.opacity = ob.palabra.toFixed(3);
+    claro.palabra.style.transform = `scale(${mezcla(.94, 1, ob.palabra).toFixed(4)})`;
+    claro.navPalabra.style.opacity = ob.navPalabra.toFixed(3);
+    claro.marcaU.style.visibility = llego && ob.palabra <= 0 ? 'hidden' : 'visible';
 
-    // Mask reveal con el lindero: el claro aparece en su sitio real (k de 0 a 1), luego se abre a toda la pantalla
-    const t1 = suave(tramo(p, u * .1, u));
-    const t2 = suave(tramo(p, fin.abre[0], fin.abre[1]));
-    const k = t2 > 0 ? g.k ** t2 : Math.max(.001, t1);
-    // Cámara: encuadre del lindero → toda la foto (Continuity transition) → Ken Burns hacia el parque lineal
-    const t3 = tramo(p, fin.abre[1], 1);
-    const cam = t3 > 0 ? entre(g.ancho, g.kb, t3, g.c) : entre(g.fit, g.ancho, t2, g.c);
-    ponerCamara(claro.lienzo, cam);
-    const tr = escalar(g.c, k);
-    claro.mascara.setAttribute('transform', tr);
-    claro.trazo.setAttribute('transform', tr);
-    claro.trazo.setAttribute('stroke-width', (1.5 / (cam.s * k)).toFixed(3));
-    // Line drawing del lindero (stroke-dashoffset) y Fade out cuando el claro ya llena la pantalla
-    claro.trazo.style.strokeDashoffset = (1 - suave(tramo(p, u * .3, u * 1.02))).toFixed(4);
-    claro.trazo.style.opacity = (.9 * (1 - tramo(p, fin.abre[0], fin.abre[0] + despues * .12))).toFixed(3);
-
+    // La guía late al final de la obertura y se apaga al primer tramo de scroll (Fade out)
+    claro.guia.style.opacity = (ob.guia * (1 - tramo(p, 0, .05))).toFixed(3);
     // El texto del claro se retira antes de que la foto soleada llegue debajo (Fade out)
-    const salida = 1 - tramo(p, fin.retiene, fin.textoFuera);
+    const salida = 1 - tramo(p, .24, .32);
     claro.texto.style.opacity = salida.toFixed(3);
     claro.texto.style.visibility = salida <= 0 ? 'hidden' : 'visible';
-    if (claro.nota) claro.nota.style.opacity = salida.toFixed(3);
+    if (claro.nota) claro.nota.style.opacity = (ob.nota * salida).toFixed(3);
+
+    const g = claro.geo;
+    if (!g) { pintarCamara(); return; }
+    // Mask reveal con el lindero: la obertura lo abre en su sitio (k de 0 a 1); el scroll lo lleva a toda la pantalla
+    const t2 = suave(tramo(p, .26, .66));
+    const kScroll = t2 > 0 ? g.k ** t2 : 1;
+    const k = Math.max(.001, ob.k) * kScroll;
+    // Cámara: encuadre del lindero → toda la foto (Continuity transition) → Ken Burns hacia el parque lineal
+    const t3 = tramo(p, .66, 1);
+    let cam = t3 > 0 ? entre(g.ancho, g.kb, t3, g.c) : entre(g.fit, g.ancho, t2, g.c);
+    // La imagen se acerca mientras la ventana se abre (contraescala ob.foto de 1.25 a 1 alrededor del centro del
+    // claro). Va en la cámara y la máscara la compensa: así la ventana en pantalla no cambia y las <img> nunca
+    // llevan transform propio (si lo llevaran, Chrome las volvería a contar para el LCP al quitarlo).
+    const e = ob.foto;
+    if (e !== 1) {
+      const px = cam.x + cam.s * g.c[0], py = cam.y + cam.s * g.c[1];
+      cam = { x: px - cam.s * e * g.c[0], y: py - cam.s * e * g.c[1], s: cam.s * e };
+    }
+    claro.cam = cam;
+    pintarCamara();
+    claro.kVentana = k / e;
+    claro.mascara.setAttribute('transform', escalar(g.c, claro.kVentana));
+    // El lindero se traza a su tamaño real antes de que la ventana se abra (Line drawing, como el lápiz de Zacamil)
+    claro.trazo.setAttribute('transform', escalar(g.c, kScroll / e));
+    claro.trazo.setAttribute('stroke-width', (1.5 / (cam.s * kScroll / e)).toFixed(3));
+    claro.trazo.style.strokeDashoffset = ((claro.sentido || 1) * (1 - ob.trazo)).toFixed(4);
+    claro.trazo.style.opacity = (.9 * (1 - tramo(p, .26, .38))).toFixed(3);
+    // La imagen entra virada y toma color después de que el lindero ya está dibujado
+    claro.fotos.style.filter = ob.color >= 1 ? '' : `saturate(${mezcla(.35, 1, ob.color).toFixed(3)}) brightness(${mezcla(.9, 1, ob.color).toFixed(3)})`;
   }
+
+  // Obertura: una línea de tiempo por carga. Curvas de Zacamil: power3 lo que viaja, power2.inOut (la cúbica
+  // .645,.045,.355,1) el recorte, power1.inOut el velo de color, lineal las opacidades de entrada.
+  function armarObertura(esc, conPuntero) {
+    const [r1, r2] = $$('.umbral__renglon');
+    const subraya = $('.umbral__subraya');
+    const titulo = $$('.claro__t');
+    const resto = [$('.claro__lugar'), $('.claro__cifra'), $('.claro .acciones')];
+    const doselFin = conPuntero ? 1.03 : 1; // margen para el parallax del dosel (±12 px)
+    const T = esc
+      ? { letras: [.15, .25], dosel: 2.4, trazo: [1.9, .6], flip: [1.45, .95], palabra: [1.8, .4], navPalabra: [2.05, .35], abre: 2.5, k: 1.25, titulo: 2.6, resto: 3.3 }
+      : { letras: [.15, .22], dosel: 2, trazo: [1.3, .6], flip: [1.15, .7], palabra: [1.3, .3], navPalabra: [1.55, .3], abre: 1.9, k: .9, titulo: 2.05, resto: 2.35 };
+    // Sentido del trazo: en escritorio el lindero se dibuja hacia atrás para que el lado que cruza la palabra llegue
+    // al final, cuando la palabra ya se fue; en móvil hacia adelante (el lado que la roza queda para el final).
+    claro.sentido = esc ? -1 : 1;
+    let quitarPuntero = () => {};
+
+    const tl = gsap.timeline({ paused: true, onUpdate: () => pintarClaro(), onComplete: terminar });
+    if (info.estado === 'pendiente') {
+      Object.assign(ob, { dosel: 1.08, trazo: 0, flip: 0, palabra: 1, navPalabra: 0, k: 0, foto: esc ? 1.25 : 1, color: esc ? 0 : 1, nota: OCULTO, guia: 0 });
+    }
+    gsap.set([r1, r2, subraya], { opacity: 1 });
+    tl.fromTo(ob, { dosel: 1.08 }, { dosel: doselFin, duration: T.dosel, ease: 'power3.out' }, 0);
+    // Las letras suben dentro de su renglón (escritorio, una por una); en móvil cada renglón sube entero
+    if (esc) {
+      tl.from($$('.umbral__letra', r1), { y: 56, duration: .85, ease: 'power3.out', stagger: .03 }, T.letras[0])
+        .from($$('.umbral__letra', r2), { y: 140, duration: .85, ease: 'power3.out', stagger: .03 }, T.letras[1]);
+    } else {
+      tl.from(r1, { y: 56, duration: 1.1, ease: 'power3.out' }, T.letras[0])
+        .from(r2, { y: 140, duration: 1.1, ease: 'power3.out' }, T.letras[1]);
+    }
+    tl.from(subraya, { scaleX: 0, transformOrigin: '50% 50%', duration: .5, ease: 'power2.out' }, esc ? 1 : .9)
+      .fromTo(ob, { trazo: 0 }, { trazo: 1, duration: T.trazo[1], ease: 'power2.inOut' }, T.trazo[0])
+      .fromTo(ob, { flip: 0 }, { flip: 1, duration: T.flip[1], ease: 'power3.inOut' }, T.flip[0])
+      .fromTo(ob, { palabra: 1 }, { palabra: 0, duration: T.palabra[1], ease: 'power1.inOut' }, T.palabra[0])
+      .fromTo(ob, { navPalabra: 0 }, { navPalabra: 1, duration: T.navPalabra[1], ease: 'power1.out' }, T.navPalabra[0])
+      // Pausa invisible: si la foto del claro no está decodificada, la escena queda quieta con el lindero dibujado
+      .call(esperarFoto, null, T.abre)
+      .fromTo(ob, { k: 0 }, { k: 1, duration: T.k, ease: 'power2.inOut' }, T.abre);
+    if (esc) {
+      tl.fromTo(ob, { foto: 1.25 }, { foto: 1, duration: T.k, ease: 'power2.inOut' }, T.abre)
+        .fromTo(ob, { color: 0 }, { color: 1, duration: 1.35, ease: 'power1.inOut' }, T.abre + .05)
+        // El título entra por los lados: «Condominio» desde la izquierda, «San Rafael» desde la derecha
+        .fromTo(titulo[0], { x: -120 }, { x: 0, duration: 1.5, ease: 'power3.inOut' }, T.titulo)
+        .fromTo(titulo[1], { x: 120 }, { x: 0, duration: 1.5, ease: 'power3.inOut' }, T.titulo)
+        .fromTo(titulo, { opacity: OCULTO }, { opacity: 1, duration: 1, ease: 'none' }, T.titulo + .4);
+    } else {
+      tl.fromTo(titulo, { y: 24 }, { y: 0, duration: .9, ease: 'power3.out', stagger: .08 }, T.titulo)
+        .fromTo(titulo, { opacity: OCULTO }, { opacity: 1, duration: .7, ease: 'none', stagger: .08 }, T.titulo);
+    }
+    tl.fromTo(resto, { opacity: OCULTO }, { opacity: 1, duration: esc ? .7 : .5, ease: 'none', stagger: esc ? .1 : .07 }, T.resto)
+      .fromTo(ob, { nota: OCULTO }, { nota: 1, duration: esc ? .7 : .5, ease: 'none' }, T.resto + .2)
+      .fromTo(ob, { guia: 0 }, { guia: 1, duration: .4, ease: 'none' }, T.resto + (esc ? .5 : .1));
+    info.duracion = tl.duration();
+
+    function esperarFoto() {
+      if (fotoOk || info.estado !== 'corriendo') return;
+      tl.pause();
+      info.estado = 'pausa';
+      info.pausada = true;
+      fotoClaro.then(() => { if (info.estado === 'pausa') { info.estado = 'corriendo'; tl.play(); } });
+    }
+
+    function terminar() {
+      if (info.estado !== 'hecha') { info.estado = 'hecha'; info.fin = performance.now(); }
+      raiz.classList.add('obertura-hecha');
+      soltarGestos();
+      pintarClaro();
+      if (conPuntero) quitarPuntero = arrancarPuntero();
+    }
+
+    // Cualquier gesto (rueda, toque, tecla, scroll, clic fuera de un control) la adelanta: llega sin salto seco
+    const gestos = ['wheel', 'touchstart', 'keydown', 'pointerdown', 'scroll'];
+    function acelerar(e) {
+      if (e.type === 'pointerdown' && e.target.closest('a, button, input, select, textarea, label')) return;
+      if (e.type === 'scroll' && scrollY < 4) return;
+      info.adelantada = true;
+      tl.timeScale(4);
+      soltarGestos();
+    }
+    function soltarGestos() { gestos.forEach((g) => removeEventListener(g, acelerar)); }
+
+    let vigente = true;
+    if (info.estado !== 'pendiente') {
+      // Ya corrió (otra rama de matchMedia) o no corresponde: estado final sin animar
+      tl.progress(1, true);
+      terminar();
+    } else {
+      pintarClaro(); // primer cuadro: solo el dosel y el isotipo
+      gestos.forEach((g) => addEventListener(g, acelerar, { passive: true }));
+      doselListo.then(() => {
+        if (!vigente || info.estado !== 'pendiente') return;
+        if (scrollY > 8) { tl.progress(1, true); terminar(); return; } // llegó con scroll (recarga, ancla): sin obertura
+        info.estado = 'corriendo';
+        info.inicio = performance.now();
+        tl.play();
+      });
+    }
+    return () => { vigente = false; soltarGestos(); quitarPuntero(); tl.kill(); };
+  }
+
+  // Puntero (solo hover y escritorio, solo el hero, después de la obertura): la cámara sigue al ratón con lerp .06
+  function arrancarPuntero() {
+    const meta = { x: 0, y: 0 };
+    const mover = (e) => {
+      if (e.pointerType !== 'mouse') return;
+      meta.x = lim((e.clientX / innerWidth) * 2 - 1, -1, 1);
+      meta.y = lim((e.clientY / innerHeight) * 2 - 1, -1, 1);
+    };
+    const tic = () => {
+      const activo = claro.p < .001; // se apaga en cuanto empieza el scroll
+      const dx = (activo ? meta.x : 0) - claro.par.x, dy = (activo ? meta.y : 0) - claro.par.y;
+      if (Math.abs(dx) < .0005 && Math.abs(dy) < .0005) return;
+      claro.par.x += dx * .06;
+      claro.par.y += dy * .06;
+      pintarCamara();
+    };
+    addEventListener('pointermove', mover, { passive: true });
+    gsap.ticker.add(tic);
+    return () => { removeEventListener('pointermove', mover); gsap.ticker.remove(tic); claro.par.x = 0; claro.par.y = 0; };
+  }
+
+  // Día ↔ noche en el claro (lección de Zacamil). Solo si la portada se ve; si no, el CSS ya dejó el modo final.
+  // - Escritorio con puntero: la foto de noche se descubre con una máscara radial que crece del centro del claro
+  //   hasta su vértice más lejano (o la pantalla); de noche a día, la misma máscara invertida.
+  // - Táctil o angosto: fundido de opacidad de la foto de noche (compositor).
+  // El dosel cambia su filtro a la par con Element.animate (botones.js termina al instante las CSSTransition del
+  // cambio de modo; estas animaciones no lo son). No toca clases de <html> ni lee estilos o medidas: nada de
+  // recálculos síncronos sobre toda la página.
+  const tactilMQ = matchMedia('(hover: none), (max-width: 899.98px)');
+  const FILTRO_DOSEL = { dia: 'brightness(.8)', noche: 'brightness(.42) saturate(.7) contrast(1.05)' }; // = pagina.css
+  const CURVA_MODO = 'cubic-bezier(.45, 0, .55, 1)'; // power2.inOut
+  const umbralSec = $('#umbral');
+  let portadaVisible = true;
+  if (umbralSec && 'IntersectionObserver' in window) {
+    new IntersectionObserver(([e]) => { portadaVisible = e.intersectionRatio >= .5; }, { threshold: [0, .5, 1] }).observe(umbralSec);
+  }
+  const disolucion = { anims: [], r: null };
+  function disolver(modo) {
+    const g = claro.geo, cam = claro.cam, el = claro.noche;
+    disolucion.anims.forEach((a) => a.cancel());
+    disolucion.anims = [];
+    if (disolucion.r) { disolucion.r.progress(1); disolucion.r = null; }
+    if (!g || !cam || !el || reducidoMQ.matches || !raiz.classList.contains('con-vuelo') || !portadaVisible) return;
+    const corto = tactilMQ.matches;
+    const dur = corto ? 800 : 1200;
+    if (dosel) disolucion.anims.push(dosel.animate([{ filter: FILTRO_DOSEL[modo === 'noche' ? 'dia' : 'noche'] }, { filter: FILTRO_DOSEL[modo] }], { duration: dur, easing: CURVA_MODO }));
+    if (corto) {
+      disolucion.anims.push(el.animate([{ opacity: modo === 'noche' ? 0 : 1 }, { opacity: modo === 'noche' ? 1 : 0 }], { duration: dur, easing: CURVA_MODO }));
+      return;
+    }
+    const W = innerWidth, H = innerHeight;
+    const cx = cam.x + cam.s * g.c[0], cy = cam.y + cam.s * g.c[1];
+    // Radio: hasta la esquina más lejana de lo que se ve del claro (la ventana o, si ya llena, la pantalla)
+    const pantalla = Math.max(...[[0, 0], [W, 0], [0, H], [W, H]].map(([x, y]) => Math.hypot(x - cx, y - cy))) / cam.s;
+    const ventana = Math.max(...g.pts.map(([x, y]) => Math.hypot(x - g.c[0], y - g.c[1]))) * (claro.kVentana || 1);
+    const R = Math.min(pantalla, ventana);
+    el.style.setProperty('--cx', `${n1(g.c[0])}px`);
+    el.style.setProperty('--cy', `${n1(g.c[1])}px`);
+    el.style.setProperty('--R', `${n1(R)}px`);
+    el.style.setProperty('--r', '-18%');
+    el.classList.add('disuelve');
+    el.classList.toggle('a-dia', modo === 'dia');
+    const t = { r: -18 };
+    disolucion.r = gsap.to(t, {
+      r: 100, duration: dur / 1000, ease: 'power2.inOut',
+      onUpdate: () => el.style.setProperty('--r', `${t.r.toFixed(2)}%`),
+      onComplete: () => {
+        el.classList.remove('disuelve', 'a-dia');
+        ['--r', '--cx', '--cy', '--R'].forEach((v) => el.style.removeProperty(v));
+      },
+    });
+  }
+  addEventListener('modo:cambiado', (e) => disolver(e.detail && e.detail.modo));
 
   // Movimiento reducido o sin GSAP: el claro abierto en su sitio real (máscara a escala 1, sin escalar ni volar)
   function pintarClaroFinal() {
@@ -518,26 +762,24 @@
         prepararReserva();
 
         if (reducido) {
-          // Sin pin ni scrub: el umbral es el dosel cerrado; al llegar al claro aparece (Crossfade) en su tamaño real.
-          // El logo pasa a la barra con un Crossfade, sin viajar. El cierre ya está cerrado sobre el lote.
+          // Sin obertura, sin pin ni scrub: el primer cuadro ya es el final (claro abierto en su sitio, lindero trazado,
+          // título visible y logo en la barra, por CSS) con un fundido de 300 ms. El cierre ya está cerrado sobre el lote.
+          info.estado = 'hecha';
+          raiz.classList.add('obertura-hecha');
           pintarClaroFinal();
           pintarReserva(1);
           vuelo.classList.add('claro-cerrado');
-          const navLogo = [claro.navIso, claro.navPalabra];
-          gsap.set(navLogo, { opacity: 0 });
-          ScrollTrigger.create({
-            trigger: '#claro', start: 'top 65%', end: 'max',
-            onToggle: (s) => { vuelo.classList.toggle('claro-cerrado', !s.isActive); gsap.set(navLogo, { opacity: s.isActive ? 1 : 0 }); },
-          });
-          quitar.push(() => { vuelo.classList.remove('claro-cerrado'); navLogo.forEach((el) => el.removeAttribute('style')); });
+          requestAnimationFrame(() => requestAnimationFrame(() => vuelo.classList.remove('claro-cerrado')));
+          quitar.push(() => vuelo.classList.remove('claro-cerrado'));
           return;
         }
 
-        /* El claro se abre: Mask reveal + Scroll-driven animation, con Shared element transition del logo y Ken Burns */
+        /* El claro se abre: obertura temporal (Mask reveal, FLIP del logo, Line drawing) y después
+           Scroll-driven animation hasta toda la foto y Ken Burns */
         raiz.classList.add('con-vuelo');
         quitar.push(() => {
           raiz.classList.remove('con-vuelo');
-          [claro.iso, claro.palabra, claro.texto, claro.linea, claro.guia, claro.navIso, claro.navPalabra, claro.marcaU, claro.nota].forEach((el) => el && el.removeAttribute('style'));
+          [claro.iso, claro.palabra, claro.texto, claro.guia, claro.navIso, claro.navPalabra, claro.marcaU, claro.nota, claro.fotos, dosel, ...claro.aereos].forEach((el) => el && el.removeAttribute('style'));
         });
         prepararClaro(escritorio);
         const progClaro = { p: 0 };
@@ -547,6 +789,7 @@
           onUpdate: () => pintarClaro(progClaro.p),
           scrollTrigger: { trigger: vuelo, start: 'top top', end: 'bottom bottom', scrub: escritorio ? .7 : .4, onRefresh: () => prepararClaro(escritorio) },
         });
+        quitar.push(armarObertura(escritorio, conLenis));
 
         /* El claro se cierra sobre su lote: Mask reveal inverso + Scroll-driven animation */
         const progLote = { p: 0 };
@@ -604,7 +847,7 @@
         ctx.add(() => {
           titulos.forEach((el) => {
             const partes = SplitText.create(el, { type: 'words', mask: 'words', wordsClass: 'palabra' });
-            const disparo = el.id === 'claro-t' ? { trigger: '#claro', start: 'top 72%', once: true } : { trigger: el, start: 'top 86%', once: true };
+            const disparo = { trigger: el, start: 'top 86%', once: true }; // el título del claro lo trae la obertura
             gsap.from(partes.words, { yPercent: 108, duration: .9, ease: 'expo.out', stagger: .04, scrollTrigger: disparo });
           });
         });

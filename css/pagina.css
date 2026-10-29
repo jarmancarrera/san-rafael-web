@@ -3,6 +3,7 @@
    Solo tokens de base.css; los translúcidos se mezclan con color-mix sobre un token.
    Estados que pone js/movimiento.js en <html>:
      .con-vuelo   el logo del umbral queda fijo para el FLIP hacia la barra
+     .obertura, .obertura-hecha   la apertura de 4 s (sección 1b)
      .con-paseo   el paseo se fija y corre en horizontal (escritorio sin movimiento reducido)
      .con-barra   la barra inferior móvil ya entró (pasado el claro)
      .sin-gsap    las librerías no cargaron: todo queda visible y quieto */
@@ -466,6 +467,144 @@ body {
 }
 
 /* =========================================================================================
+   1b · Obertura (00-plan/inspiracion/zacamil/ANALISIS.md, versión a)
+   Unos 4 s que corren solos al cargar (3 s en móvil) y terminan en el claro abierto en su sitio.
+   Con JS la portada no ocupa scroll: es una capa sobre el inicio del claro. Estados en <html>:
+     .obertura         la línea de tiempo de movimiento.js manda y apaga el respaldo CSS
+     .obertura-hecha   terminó o se saltó: todo visible por CSS, aunque GSAP se revierta
+   Sin JS, o sin GSAP (.sin-gsap), queda la portada de antes, quieta y completa.
+   ========================================================================================= */
+@property --r {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 100%;
+}
+
+.claro__t {
+  display: inline-block;
+}
+
+/* El claro solo recibe eventos en su texto. Con la ficha del selector o su pantalla completa abiertas (viven en
+   #lotes, z-index 1), la portada pasa debajo y no tapa «Reservar este lote» en el teléfono. */
+.claro {
+  pointer-events: none;
+}
+
+html:is(.sel-pleno-abierto, :has(.sel__ficha.es-abierta)) :is(.umbral, .claro) {
+  z-index: 0;
+  pointer-events: none;
+}
+
+html:is(.sel-pleno-abierto, :has(.sel__ficha.es-abierta)) .claro__texto {
+  pointer-events: none;
+}
+
+@media (scripting: enabled) {
+  :root:not(.sin-gsap) .umbral {
+    position: absolute;
+    inset: 0 0 auto;
+    pointer-events: none;
+  }
+
+  :root:not(.sin-gsap) .umbral__linea {
+    display: none;
+  }
+
+  /* La guía de scroll late al final, bajo el texto del claro */
+  :root:not(.sin-gsap) .umbral__guia {
+    left: var(--margen);
+    bottom: 40px;
+    translate: 0 0;
+    opacity: 0;
+  }
+}
+
+@media (scripting: enabled) and (max-width: 899.98px) {
+  :root:not(.sin-gsap) .umbral__guia {
+    display: none;
+  }
+}
+
+@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+  /* Primer cuadro: el dosel un poco más cerca y solo el isotipo; lo demás lo trae la obertura.
+     Respaldo: si movimiento.js no toma el control (.obertura) en 3.5 s, todo aparece igual. */
+  :root:not(.sin-gsap):not(.obertura-hecha) .vuelo .escena__dosel {
+    transform: scale(1.08);
+  }
+
+  /* .001 y no 0: Chrome registra el texto para el LCP en su primer cuadro y no cuando la obertura lo revela */
+  :root:not(.sin-gsap):not(.obertura-hecha) :is(.umbral__renglon, .umbral__subraya, .claro__t, .claro__lugar, .claro__cifra, .claro .acciones, .claro__nota) {
+    opacity: .001;
+    animation: obertura-respaldo 400ms linear 3.5s forwards;
+  }
+
+  .obertura:not(.obertura-hecha) :is(.umbral__renglon, .umbral__subraya, .claro__t, .claro__lugar, .claro__cifra, .claro .acciones, .claro__nota) {
+    animation: none;
+  }
+
+  /* Los controles del claro responden cuando ya se ven */
+  .obertura:not(.obertura-hecha) .claro__texto {
+    pointer-events: none;
+  }
+
+  /* La guía late solo al terminar la obertura */
+  .obertura:not(.obertura-hecha) .umbral__guia i {
+    animation: none;
+  }
+
+  .obertura-hecha .umbral__guia i {
+    animation-delay: 300ms;
+  }
+}
+
+@keyframes obertura-respaldo {
+  to { opacity: 1; }
+}
+
+/* Día ↔ noche en el claro (lección de Zacamil): la foto de noche se descubre con una máscara radial desde el
+   centro del claro (--cx, --cy y el radio --R en px del render; --r de -18 % a 100 % en 1.2 s, power2.inOut).
+   De noche a día, la misma máscara invertida. Reemplaza el crossfade de 700 ms mientras hay vuelo. En teléfonos,
+   movimiento.js hace un fundido de opacidad; el filtro del dosel lo anima movimiento.js (Element.animate). */
+.con-vuelo .aereo--noche {
+  transition: none;
+}
+
+.aereo--noche.disuelve {
+  opacity: 1;
+  -webkit-mask-image: radial-gradient(circle var(--R) at var(--cx) var(--cy), var(--crema) var(--r), transparent calc(var(--r) + 18%));
+  mask-image: radial-gradient(circle var(--R) at var(--cx) var(--cy), var(--crema) var(--r), transparent calc(var(--r) + 18%));
+}
+
+.aereo--noche.disuelve.a-dia {
+  -webkit-mask-image: radial-gradient(circle var(--R) at var(--cx) var(--cy), transparent var(--r), var(--crema) calc(var(--r) + 18%));
+  mask-image: radial-gradient(circle var(--R) at var(--cx) var(--cy), transparent var(--r), var(--crema) calc(var(--r) + 18%));
+}
+
+/* Movimiento reducido: sin obertura; el primer cuadro ya es el final (logo en la barra, claro abierto en su sitio,
+   título visible) y entra con un fundido de opacidad de 300 ms (base.css apaga el resto con !important) */
+@media (scripting: enabled) and (prefers-reduced-motion: reduce) {
+  :root:not(.sin-gsap) .umbral__marca {
+    visibility: hidden;
+  }
+
+  :root:not(.sin-gsap) .nav__marca :is(.marca-h__iso, .marca-h__palabra) {
+    opacity: 1;
+  }
+
+  .vuelo :is(.lienzo__fotos--claro, .lindero-trazo) {
+    transition: opacity 300ms linear !important;
+  }
+
+  :root:not(.sin-gsap) .claro__texto {
+    animation: obertura-funde 300ms linear both !important;
+  }
+}
+
+@keyframes obertura-funde {
+  from { opacity: 0; }
+}
+
+/* =========================================================================================
    2 · Plan maestro: lámina con cuadro de áreas y cotas sobre el aéreo
    ========================================================================================= */
 .plan {
@@ -686,6 +825,124 @@ body {
 .areas tr.on th {
   box-shadow: inset 3px 0 0 var(--madera);
   font-weight: 500;
+}
+
+/* Recorrido del plan: cinco pasos; el activo se lee, los demás esperan. El plano queda fijo al lado */
+.plan__ojo {
+  margin: 0 0 14px;
+  color: var(--texto-2);
+}
+
+.pasos {
+  margin: 40px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.paso {
+  min-height: 46svh;
+  padding: 28px 0 32px;
+  border-top: 1px solid var(--linea);
+  opacity: .38;
+  transition: opacity var(--dur-media) var(--curva-claro);
+}
+
+.paso.es-activo {
+  opacity: 1;
+}
+
+.paso__n {
+  margin: 0;
+  color: var(--texto-2);
+}
+
+.paso__cifra {
+  margin: 14px 0 10px;
+  font-family: var(--f-titulo);
+  font-weight: 200;
+  font-size: clamp(44px, 6vw, 76px);
+  line-height: 1;
+  letter-spacing: .02em;
+  color: var(--trazo);
+  font-variant-numeric: tabular-nums;
+}
+
+.paso__txt {
+  margin: 0;
+  max-width: 40ch;
+  font-size: var(--t-cuerpo);
+  line-height: 1.6;
+  color: var(--texto);
+}
+
+.plan__medida {
+  margin: 12px 0 0;
+  color: var(--texto-2);
+}
+
+.areas-plegable {
+  margin-top: 40px;
+}
+
+.areas-plegable summary {
+  cursor: pointer;
+  list-style: none;
+  display: inline-flex;
+}
+
+.areas-plegable summary::-webkit-details-marker {
+  display: none;
+}
+
+.areas-plegable[open] .areas {
+  margin-top: 20px;
+}
+
+/* El plano acompaña: fijo bajo la barra mientras pasan los pasos */
+.plan__figura {
+  position: sticky;
+  top: calc(var(--nav-alto) + env(safe-area-inset-top, 0px) + 16px);
+  align-self: start;
+}
+
+@media (max-width: 899.98px) {
+  .plan__rejilla { gap: 0; }
+  .plan__figura {
+    order: -1;
+    z-index: 2;
+    top: calc(var(--nav-alto) + env(safe-area-inset-top, 0px));
+    margin: 0 calc(var(--margen) * -1);
+    padding: 10px var(--margen);
+    border-left: 0;
+    border-right: 0;
+  }
+  .plan__figura .plano__svg { max-height: 40svh; }
+  .plan__figura figcaption { display: none; }
+  .paso { min-height: 40svh; }
+}
+
+@media (min-width: 900px) {
+  .plan__texto { grid-column: 1 / span 5; }
+  .plan__figura { grid-column: 6 / span 7; }
+}
+
+.plano__acceso circle {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: scale var(--dur-media) var(--curva-resorte);
+}
+
+.plano__acceso.on circle {
+  scale: 2;
+}
+
+.plano__acceso.on text {
+  font-weight: 500;
+}
+
+.plano__borde.on {
+  stroke: var(--madera);
+  stroke-width: 4;
 }
 
 /* Cierre: el lote es una parcela crema dentro del dosel */
@@ -1320,7 +1577,7 @@ body {
   right: 0;
   bottom: 0;
   padding: 8px 16px calc(12px + env(safe-area-inset-bottom, 0px));
-  background-color: var(--velo);
+  background-color: var(--fondo);
   border-top: 1px solid var(--linea);
   color: var(--texto);
   /* Durante el claro solo asoma la línea de la nota; las acciones entran al dejarlo (Slide in) */
@@ -1406,27 +1663,21 @@ html:is(.sel-pleno-abierto, :has(.sel__ficha.es-abierta)) .barra-movil {
   transition: opacity var(--dur-foto) var(--curva-claro);
 }
 
-/* Velo: la luz de las farolas sobre la foto (multiply con la madera) */
+/* Velo cálido de las farolas (sin mezcla: solo opacidad, barato en el teléfono) */
 :is(.foto-marco, .pilar__foto, .lugar__foto)::before {
   background-color: var(--madera);
-  mix-blend-mode: multiply;
 }
 
 /* Viñeta radial: los bordes caen a la selva de noche */
 :is(.foto-marco, .pilar__foto, .lugar__foto)::after {
-  background-image: radial-gradient(ellipse 75% 70% at 50% 45%, transparent 45%, color-mix(in srgb, var(--dosel) 70%, transparent) 100%);
+  background-image:
+    radial-gradient(ellipse 75% 70% at 50% 45%, transparent 45%, color-mix(in srgb, var(--dosel) 70%, transparent) 100%),
+    linear-gradient(color-mix(in srgb, var(--dosel) 42%, transparent), color-mix(in srgb, var(--dosel) 42%, transparent));
 }
 
-[data-modo="noche"] :is(.foto-marco, .pilar__foto, .lugar__foto)::before { opacity: .3; }
-[data-modo="noche"] :is(.foto-marco, .pilar__foto, .lugar__foto)::after { opacity: .85; }
+[data-modo="noche"] :is(.foto-marco, .pilar__foto, .lugar__foto)::before { opacity: .12; }
+[data-modo="noche"] :is(.foto-marco, .pilar__foto, .lugar__foto)::after { opacity: 1; }
 
-[data-modo="noche"] :is(.foto-marco, .pilar__foto, .lugar__foto) .foto {
-  filter: brightness(.62) contrast(1.08) saturate(.7);
-}
-
-[data-modo="noche"] .lugar__foto .foto {
-  filter: brightness(.58) contrast(1.1) saturate(.64);
-}
 
 /* =========================================================================================
    Movimiento reducido: sin pin ni scrub; el claro abierto, el lote cerrado, todo legible

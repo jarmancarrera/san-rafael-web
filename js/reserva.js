@@ -30,7 +30,7 @@ export const REGLAS = {
   correo(v) {
     const t = String(v).trim()
     if (!t) return 'Escriba su correo electrónico.'
-    if (t.length > 120 || !/^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/.test(t)) return 'Revise el correo: debe tener la forma nombre@dominio.com.'
+    if (t.length > 120 || !/^[\p{L}\p{N}._%+'-]+@[\p{L}\p{N}-]+(\.[\p{L}\p{N}-]+)+$/u.test(t)) return 'Revise el correo: debe tener la forma nombre@dominio.com.'
     return ''
   },
   telefono(v) {
@@ -124,7 +124,7 @@ async function iniciar() {
     const l = info.get(st.lote)
     const p = st.plan
     const r = (k, v) => { $(`[data-r="${k}"]`, resumen).textContent = v }
-    r('lote', l ? `${l.id} · Manzana ${l.manzana}` : 'Sin elegir')
+    r('lote', l ? l.id : 'Sin elegir')
     r('area', l ? `${uno(l.area_m2)} m² aprox.` : 'Sin elegir')
     r('precio', p ? fmt(p.precio) : m.lote)
     r('enganche', p ? `${fmt(p.enganche)} (${uno(p.enganche_pct)} %)` : m.enganche)
@@ -204,21 +204,25 @@ async function iniciar() {
 
   // ---------- Paso 1 · Lote ----------
   const select = $('#r-lote')
-  const porMz = new Map()
+  // Grupos por la letra del código, rotulados con su rango de lotes («Lotes C-01 a C-14»)
+  const grupos = new Map()
   for (const l of [...info.values()].sort((a, b) => a.id.localeCompare(b.id))) {
-    if (!porMz.has(l.manzana)) {
+    const letra = l.id[0]
+    if (!grupos.has(letra)) {
       const og = document.createElement('optgroup')
-      og.label = `Manzana ${l.manzana}`
-      porMz.set(l.manzana, og)
+      grupos.set(letra, { og, ids: [] })
       select.append(og)
     }
+    const g = grupos.get(letra)
     const o = document.createElement('option')
     o.value = l.id
     const e = estadoDe(l.id)
     o.textContent = `${l.id} · ${uno(l.area_m2)} m² aprox.${e === 'disponible' ? '' : ` · ${e}`}`
     o.disabled = e !== 'disponible'
-    porMz.get(l.manzana).append(o)
+    g.og.append(o)
+    g.ids.push(l.id)
   }
+  for (const { og, ids } of grupos.values()) og.label = ids.length > 1 ? `Lotes ${ids[0]} a ${ids.at(-1)}` : `Lote ${ids[0]}`
   const errorLote = $('[data-error="lote"]')
   function pintarLote() {
     const l = info.get(st.lote)
@@ -226,7 +230,6 @@ async function iniciar() {
     $('[data-ficha-lote]').hidden = !l
     if (!l) return
     $('[data-l="id"]').textContent = `Lote ${l.id}`
-    $('[data-l="manzana"]').textContent = `Manzana ${l.manzana}`
     $('[data-l="area"]').textContent = `${uno(l.area_m2)} m²`
     $('[data-l="medidas"]').textContent = `${uno(l.frente_m)} × ${uno(l.fondo_m)} m`
     $('[data-figura]').innerHTML = figuraLote(l.puntos, l)
@@ -344,7 +347,7 @@ async function iniciar() {
           numero: r.numero,
           fecha: new Date().toISOString(),
           demo: true,
-          lote: { id: l.id, manzana: l.manzana, area_m2: l.area_m2, frente_m: l.frente_m, fondo_m: l.fondo_m, puntos: l.puntos },
+          lote: { id: l.id, area_m2: l.area_m2, frente_m: l.frente_m, fondo_m: l.fondo_m, puntos: l.puntos },
           plan: st.plan,
           cliente: { nombre: st.cliente.nombre, correo: st.cliente.correo, telefono: st.cliente.telefono },
           pago: { intento: r.id, monto: precios.monto_reserva, estado: r.estado },

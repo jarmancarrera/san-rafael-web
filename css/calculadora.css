@@ -26,11 +26,17 @@
   display: none !important;
 }
 
-.cal p,
-.cal figure,
-.cal dl,
-.cal dd {
+/* Reset sin especificidad: los márgenes propios de cada bloque mandan */
+:where(.cal) :where(p, figure, dl, dd) {
   margin: 0;
+}
+
+/* Escritorio con altura suficiente: los controles acompañan mientras se leen los resultados */
+@media (min-width: 900px) and (min-height: 860px) {
+  .cal-entradas {
+    position: sticky;
+    top: calc(var(--nav-alto, 0px) + 24px);
+  }
 }
 
 .cal-panel {
@@ -628,7 +634,7 @@
     padding: 12px 16px;
     border: 1px solid var(--linea);
     border-radius: var(--cal-radio);
-    background-color: var(--velo);
+    background-color: var(--papel); /* opaco: el deslizador no se ve a través del resumen */
     box-shadow: var(--sombra);
   }
 
