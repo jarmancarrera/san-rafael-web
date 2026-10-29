@@ -1,0 +1,21 @@
+{
+  "demo": true,
+  "moneda": "GTQ",
+  "nota": "Todos los valores son de demostración (PLAN-v2 §11). Ningún precio, tasa ni monto es real.",
+  "precio_m2": 1000,
+  "area_ejemplo_m2": 300,
+  "enganche_pct": { "minimo": 10, "defecto": 20, "maximo": 90 },
+  "plazos_meses": [12, 24, 36, 48, 60, 84, 120],
+  "plazo_defecto_meses": 60,
+  "tasa_anual_pct": 10,
+  "sin_intereses": { "plazo_max_meses": 24 },
+  "monto_reserva": 5000,
+  "marcadores": {
+    "lote": "Q XXX,XXX",
+    "m2": "Q X,XXX/m²",
+    "reserva": "Q Y,YYY",
+    "enganche": "XX %",
+    "cuota": "Q Z,ZZZ/mes"
+  },
+  "estados": {}
+}

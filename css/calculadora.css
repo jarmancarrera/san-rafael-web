@@ -1,0 +1,654 @@
+/* San Rafael v2 · calculadora.css (PLAN-v2 §11 y §12, constructor C). Requiere base.css y botones.css.
+   La calculadora de componentes/calculadora/ re-vestida: tokens de día y noche, Barlow, línea de 1 px.
+   Paneles de papel con radio de 2 px, como el selector. Ninguna forma propia de botón: los controles son
+   .b, .b-claro, .b-chip y .b-enlace de botones.css. Sin degradados ni resplandor; los deslizadores son una
+   regla con su cota (el avance lo dibuja el contenedor con --p, de 0 a 1).
+   Móvil (< 900 px): una columna y el resumen de la cuota fijo abajo, encima de la barra del pulgar (--barra-alto). */
+
+.cal {
+  --cal-radio: 2px;
+  --cal-pulgar: 16px;
+  display: grid;
+  gap: 16px;
+  color: var(--texto);
+  font-family: var(--f-texto);
+}
+
+@media (min-width: 900px) {
+  .cal {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    align-items: start;
+    gap: var(--canal);
+  }
+}
+
+.cal [hidden] {
+  display: none !important;
+}
+
+.cal p,
+.cal figure,
+.cal dl,
+.cal dd {
+  margin: 0;
+}
+
+.cal-panel {
+  min-width: 0;
+  padding: clamp(20px, 3vw, 40px);
+  border: 1px solid var(--linea);
+  border-radius: var(--cal-radio);
+  background-color: var(--papel);
+  transition: background-color var(--dur-tema) var(--curva-claro), border-color var(--dur-tema) var(--curva-claro);
+}
+
+.cal-etq {
+  margin: 0;
+  font-family: var(--f-texto);
+  font-weight: 500;
+  font-size: var(--t-etiqueta);
+  line-height: 1.3;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--texto);
+}
+
+/* ---------- Campos ---------- */
+.cal-campo {
+  min-width: 0;
+  margin: 0 0 36px;
+}
+
+.cal-campo:last-child {
+  margin-bottom: 0;
+}
+
+.cal-fila {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  margin-bottom: 4px;
+}
+
+.cal-lote {
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+
+.cal-valor {
+  font-weight: 300;
+  font-size: 28px;
+  line-height: 1;
+  color: var(--trazo);
+  font-variant-numeric: tabular-nums;
+}
+
+.cal-sub {
+  display: block;
+  margin: 12px 0 0;
+  font-size: 15px;
+}
+
+/* Campo de monto: línea inferior, unidad a un lado, sin caja */
+.cal-caja {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  border-bottom: 1px solid var(--texto-2);
+  transition: border-color var(--dur-rapida) var(--curva-salida);
+}
+
+.cal-caja:hover {
+  border-bottom-color: var(--texto);
+}
+
+.cal-caja:focus-within {
+  border-bottom-color: var(--trazo);
+}
+
+.cal-caja:has(input:focus-visible) {
+  outline: 2px solid var(--foco);
+  outline-offset: 4px;
+}
+
+.cal-caja:has([aria-invalid="true"]) {
+  border-bottom-width: 2px;
+  border-bottom-color: var(--texto);
+}
+
+.cal-caja:has(input[readonly]) {
+  border-bottom-style: dashed;
+}
+
+.cal-unidad {
+  font-weight: 300;
+  font-size: 22px;
+}
+
+.cal input[type="number"] {
+  flex: 1;
+  min-width: 0;
+  min-height: 48px;
+  margin: 0;
+  padding: 4px 0;
+  border: 0;
+  border-radius: 0;
+  background-color: transparent;
+  color: var(--texto);
+  font-family: var(--f-texto);
+  font-weight: 300;
+  font-size: 26px;
+  font-variant-numeric: tabular-nums;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.cal input[type="number"]::-webkit-inner-spin-button,
+.cal input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.cal input[type="number"]::placeholder {
+  color: var(--texto-2);
+  opacity: 1;
+}
+
+.cal input[type="number"]:focus-visible {
+  outline: none;
+}
+
+.cal input[readonly] {
+  cursor: default;
+}
+
+.cal-nota,
+.cal-error {
+  margin-top: 8px;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--texto);
+}
+
+.cal-nota:empty,
+.cal-error:empty {
+  display: none;
+}
+
+/* Error: lo dice el texto y una marca dibujada, no un color (la paleta no tiene rojo) */
+.cal-error {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-weight: 500;
+}
+
+.cal-error::before {
+  content: "";
+  flex: none;
+  width: 14px;
+  height: 14px;
+  translate: 0 2px;
+  background-color: currentColor;
+  mask: url("../img/iconos/cerrar.svg") center / contain no-repeat;
+  -webkit-mask: url("../img/iconos/cerrar.svg") center / contain no-repeat;
+}
+
+/* ---------- Deslizadores: una regla con su cota ---------- */
+.cal-rango {
+  --p: 0;
+  position: relative;
+  height: 44px;
+}
+
+.cal-rango::before,
+.cal-rango::after {
+  content: "";
+  position: absolute;
+  top: calc(50% - .5px);
+  left: calc(var(--cal-pulgar) / 2);
+  height: 1px;
+  background-color: var(--texto-2);
+  pointer-events: none;
+}
+
+.cal-rango::before {
+  right: calc(var(--cal-pulgar) / 2);
+}
+
+/* Tramo recorrido: 2 px en el color del trazo */
+.cal-rango::after {
+  top: calc(50% - 1px);
+  height: 2px;
+  width: calc((100% - var(--cal-pulgar)) * var(--p));
+  background-color: var(--trazo);
+  transition: width var(--dur-rapida) var(--curva-salida);
+}
+
+.cal input[type="range"] {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: 44px;
+  margin: 0;
+  background-color: transparent;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  touch-action: pan-y;
+}
+
+.cal input[type="range"]:focus-visible {
+  outline: none;
+}
+
+.cal input[type="range"]::-webkit-slider-runnable-track {
+  height: 44px;
+  background-color: transparent;
+}
+
+.cal input[type="range"]::-moz-range-track {
+  height: 44px;
+  background-color: transparent;
+}
+
+/* Cursor: una tablilla de 16 × 28 con trazo de 1 px */
+.cal input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: var(--cal-pulgar);
+  height: 28px;
+  margin-top: 8px;
+  border: 1px solid var(--trazo);
+  border-radius: var(--cal-radio);
+  background-color: var(--papel);
+  transition: background-color var(--dur-rapida) var(--curva-salida);
+}
+
+.cal input[type="range"]::-moz-range-thumb {
+  box-sizing: border-box;
+  width: var(--cal-pulgar);
+  height: 28px;
+  border: 1px solid var(--trazo);
+  border-radius: var(--cal-radio);
+  background-color: var(--papel);
+}
+
+.cal input[type="range"]:hover::-webkit-slider-thumb,
+.cal input[type="range"]:active::-webkit-slider-thumb {
+  background-color: var(--trazo);
+}
+
+.cal input[type="range"]:hover::-moz-range-thumb,
+.cal input[type="range"]:active::-moz-range-thumb {
+  background-color: var(--trazo);
+}
+
+.cal input[type="range"]:focus-visible::-webkit-slider-thumb {
+  outline: 2px solid var(--foco);
+  outline-offset: 3px;
+}
+
+.cal input[type="range"]:focus-visible::-moz-range-thumb {
+  outline: 2px solid var(--foco);
+  outline-offset: 3px;
+}
+
+.cal-extremos {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Marcas del plazo: una cota por plazo, alineada con la posición del cursor */
+.cal-rango--marcas {
+  margin-bottom: 26px;
+}
+
+.cal-marcas {
+  position: absolute;
+  top: 50%;
+  left: calc(var(--cal-pulgar) / 2);
+  right: calc(var(--cal-pulgar) / 2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  pointer-events: none;
+}
+
+.cal-marcas li {
+  position: absolute;
+  top: -6px;
+  left: calc(var(--i) * 100%);
+  translate: -50% 0;
+  padding-top: 26px;
+  font-size: 12px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.cal-marcas li::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: calc(50% - .5px);
+  width: 1px;
+  height: 12px;
+  background-color: var(--texto-2);
+}
+
+.cal-marcas li[data-activa] {
+  font-weight: 500;
+  color: var(--trazo);
+}
+
+.cal-marcas li[data-activa]::before {
+  background-color: var(--trazo);
+}
+
+/* Fuera del máximo sin intereses: tachado, como lo que no aplica en una lámina */
+.cal-marcas li[data-fuera] {
+  text-decoration: line-through;
+}
+
+.cal-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 8px;
+  margin-top: 12px;
+}
+
+/* ---------- Resultados ---------- */
+.cal-res-cab {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px 16px;
+}
+
+.cal-demo {
+  color: var(--texto);
+}
+
+.cal-cuota {
+  margin-top: 12px;
+}
+
+.cal-cuota strong {
+  display: block;
+  font-weight: 200;
+  font-size: clamp(44px, 6vw, 80px);
+  line-height: 1;
+  letter-spacing: -.01em;
+  color: var(--trazo);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.cal-cuota-det {
+  display: block;
+  margin-top: 10px;
+  font-size: 15px;
+}
+
+/* Barra de composición del total pagado: enganche (madera), capital (trazo) e intereses (contorno) */
+.cal-composicion {
+  margin-top: 36px;
+}
+
+.cal-barra {
+  display: flex;
+  gap: 2px;
+  height: 14px;
+  margin-top: 12px;
+}
+
+.cal-seg {
+  flex: var(--ancho, 0) 1 0;
+  min-width: 0;
+  transition: flex-grow var(--dur-media) var(--curva-salida), background-color var(--dur-tema) var(--curva-claro);
+}
+
+.cal-seg--enganche {
+  background-color: var(--madera);
+}
+
+.cal-seg--capital {
+  background-color: var(--trazo);
+}
+
+.cal-seg--intereses {
+  border: 1px solid var(--trazo);
+  background-color: transparent;
+}
+
+/* Sin simular: la barra queda proyectada en línea discontinua */
+.cal[data-simulado="no"] .cal-barra .cal-seg,
+.cal[data-invalido] .cal-barra .cal-seg {
+  border: 1px dashed var(--texto-2);
+  background-color: transparent;
+}
+
+.cal-leyenda {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cal-leyenda li {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  font-size: 15px;
+}
+
+.cal-muestra {
+  width: 12px;
+  height: 12px;
+}
+
+.cal-ley-valor {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.cal-lista {
+  margin-top: 32px;
+}
+
+.cal-lista > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--linea);
+}
+
+.cal-lista dt {
+  font-size: 15px;
+}
+
+.cal-lista dd {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.cal-total dt,
+.cal-total dd {
+  font-weight: 500;
+  color: var(--trazo);
+}
+
+/* ---------- Comparación de dos plazos, lado a lado ---------- */
+.cal-comparar {
+  margin-top: 40px;
+  padding-top: 24px;
+  border-top: 1px solid var(--linea);
+}
+
+.cal-comp {
+  width: 100%;
+  margin-top: 16px;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-variant-numeric: tabular-nums;
+}
+
+.cal-comp th,
+.cal-comp td {
+  padding: 10px 0 10px 12px;
+  border-bottom: 1px solid var(--linea);
+  font-size: 15px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.cal-comp tbody th {
+  padding-left: 0;
+  font-weight: 400;
+  text-align: left;
+  white-space: normal;
+}
+
+.cal-comp thead th {
+  vertical-align: bottom;
+  font-weight: 500;
+  font-size: var(--t-etiqueta);
+  line-height: 1.3;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  white-space: normal;
+}
+
+/* Su plazo manda: la columna de su plan va en el color del trazo */
+.cal-comp :is(th, td):nth-child(2) {
+  font-weight: 500;
+  color: var(--trazo);
+}
+
+.cal-lectura {
+  margin-top: 12px;
+}
+
+/* ---------- Tabla de amortización ---------- */
+.cal-amort {
+  margin-top: 28px;
+}
+
+.cal-amort summary {
+  list-style: none;
+}
+
+.cal-amort summary::-webkit-details-marker {
+  display: none;
+}
+
+.cal-tabla {
+  max-height: 22rem;
+  margin-top: 12px;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.cal-tabla table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.cal-tabla caption {
+  padding-bottom: 8px;
+  caption-side: top;
+  text-align: left;
+  font-size: 14px;
+}
+
+.cal-tabla th,
+.cal-tabla td {
+  padding: 6px 0 6px 10px;
+  border-bottom: 1px solid var(--linea);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.cal-tabla th:first-child,
+.cal-tabla td:first-child {
+  padding-left: 0;
+}
+
+.cal-tabla thead th {
+  position: sticky;
+  top: 0;
+  background-color: var(--papel);
+  font-weight: 500;
+}
+
+.cal-tabla tbody th {
+  font-weight: 400;
+}
+
+.cal-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 32px;
+}
+
+.cal-estado {
+  min-height: 1.5em;
+  margin-top: 12px;
+  font-size: 15px;
+}
+
+/* ---------- Resumen fijo abajo (solo móvil) ---------- */
+.cal-fijo {
+  display: none;
+}
+
+@media (max-width: 899.98px) {
+  .cal-fijo {
+    position: sticky;
+    z-index: 5;
+    bottom: calc(var(--barra-alto, 0px) + 8px);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 12px;
+    padding: 12px 16px;
+    border: 1px solid var(--linea);
+    border-radius: var(--cal-radio);
+    background-color: var(--velo);
+    box-shadow: var(--sombra);
+  }
+
+  .cal-fijo-cuota {
+    font-weight: 500;
+    font-size: 20px;
+    line-height: 1.2;
+    color: var(--trazo);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .cal-fijo-det {
+    font-size: 15px;
+  }
+
+  .cal-fijo-demo {
+    margin-left: auto;
+    font-weight: 500;
+    font-size: var(--t-etiqueta);
+    letter-spacing: .14em;
+    text-transform: uppercase;
+  }
+}

@@ -1,0 +1,988 @@
+/* San Rafael v2 · selector.css · selector de lotes (constructor B, PLAN-v2 §8 y §12).
+   Requiere base.css y botones.css. Solo tokens de base.css: ningún color propio.
+   Escritorio (>= 1100 px): lista | render | ficha (patrón Infia, INSPIRACION §11).
+   Móvil: render arriba, lista como camino principal, ficha como lámina inferior con asa.
+   Estados de lote (día / noche): reposo, hover o foco, elegido con cotas, reservado y vendido. */
+
+.sel {
+  --sel-radio: 2px;      /* único radio propio del selector (paneles, render, campo, filas, rótulos). Sin píldoras:
+                            la forma de los botones la pone botones.css con sus clases (.b, .b-chip, .b-flecha, .barra-lotes) */
+  --sel-alto: clamp(600px, 82svh, 860px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  color: var(--texto);
+}
+
+@media (min-width: 1100px) {
+  .sel {
+    grid-template-columns: minmax(264px, 300px) minmax(0, 1fr) minmax(300px, 340px);
+    height: var(--sel-alto);
+  }
+}
+
+/* Carga y error */
+.sel__estado {
+  display: grid;
+  place-items: center;
+  gap: 16px;
+  min-height: 320px;
+  margin: 0;
+  padding: 24px;
+  border: 1px dashed var(--linea);
+  border-radius: var(--sel-radio);
+  text-align: center;
+  font-size: var(--t-etiqueta);
+  font-weight: 500;
+  letter-spacing: .18em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+.sel__estado p {
+  margin: 0;
+  max-width: 40ch;
+}
+
+/* =========================================================================================
+   Render: un lienzo de 2400×1350 (imagen día, imagen noche y un solo SVG) movido por la cámara
+   ========================================================================================= */
+.sel__escena {
+  position: relative;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  isolation: isolate;
+  border-radius: var(--sel-radio);
+  background-color: var(--dosel);
+}
+
+/* Columna central: render y, debajo, la barra de lotes */
+.sel__centro {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  min-height: 0;
+}
+
+@media (min-width: 1100px) {
+  .sel__escena {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+}
+
+@media (max-width: 1099px) {
+  .sel__centro {
+    order: -1;
+  }
+  .sel__escena {
+    aspect-ratio: 4 / 5;
+    max-height: 76svh;
+  }
+}
+
+@media (min-width: 600px) and (max-width: 1099px) {
+  .sel__escena {
+    aspect-ratio: 4 / 3;
+  }
+}
+
+.sel__vista {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  touch-action: pan-y;              /* sin zoom: el dedo desplaza la página */
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.sel__vista.es-libre {
+  touch-action: none;               /* con zoom o en pantalla completa: el dedo mueve el plano */
+  cursor: grab;
+}
+
+.sel__vista.es-arrastre {
+  cursor: grabbing;
+}
+
+.sel__lienzo {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 2400px;
+  height: 1350px;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+.sel__foto,
+.sel__plano {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+}
+
+.sel__foto {
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+
+/* Día ↔ noche: crossfade de fotos (700 ms). Lo dispara <html data-modo>, que maneja botones.js */
+.sel__noche {
+  opacity: 0;
+  transition: opacity var(--dur-foto) var(--curva-claro);
+}
+
+[data-modo="noche"] .sel__noche {
+  opacity: 1;
+}
+
+.sel__plano {
+  overflow: visible;
+}
+
+/* ---------- SVG: lindero y parques (re-terreno-delineate) ---------- */
+.sel-lindero {
+  fill: none;
+  stroke: var(--crema);
+  stroke-opacity: .9;
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
+.sel-lindero.es-dibujado {
+  transition: stroke-dashoffset 1200ms var(--curva-claro);   /* Draw-on, una sola vez */
+}
+
+.sel-parque {
+  fill: none;
+  stroke: var(--crema);
+  stroke-opacity: .5;
+  stroke-width: 1;
+  stroke-dasharray: 2 4;            /* línea discontinua: lo proyectado, como en la lámina */
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
+/* ---------- Lotes: estados de PLAN-v2 §8 ---------- */
+.sel-lote {
+  fill: var(--madera);
+  fill-opacity: 0;
+  stroke: var(--bosque);            /* reposo de día: 1 px rgba(27,46,32,.45) */
+  stroke-opacity: .45;
+  stroke-width: 1;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  shape-rendering: geometricPrecision;
+  cursor: pointer;
+  transition:
+    fill-opacity var(--dur-rapida) var(--curva-salida),
+    stroke-opacity var(--dur-rapida) var(--curva-salida),
+    stroke var(--dur-rapida) var(--curva-salida);
+}
+
+[data-modo="noche"] .sel-lote {
+  stroke: var(--crema);             /* reposo de noche: 1 px rgba(240,237,227,.4) */
+  stroke-opacity: .4;
+}
+
+/* Hover o foco: trazo 1.5 px madera, relleno madera al 12 % */
+.sel-lote:hover,
+.sel-lote.es-foco {
+  stroke: var(--madera);
+  stroke-opacity: 1;
+  stroke-width: 1.5;
+  fill-opacity: .12;
+}
+
+/* Elegido: relleno madera al 28 %, trazo 1.5 px; las cotas van en .sel-cota */
+.sel-lote.es-elegido {
+  stroke: var(--madera);
+  stroke-opacity: 1;
+  stroke-width: 1.5;
+  fill-opacity: .28;
+}
+
+/* Reservado: relleno gris al 20 %, trazo discontinuo */
+.sel-lote[data-estado="reservado"] {
+  fill: var(--texto-2);
+  fill-opacity: .2;
+  stroke-dasharray: 4 3;
+}
+
+.sel-lote[data-estado="reservado"]:is(:hover, .es-foco, .es-elegido) {
+  fill-opacity: .32;
+}
+
+/* Vendido: relleno al 35 %, sin interacción */
+.sel-lote[data-estado="vendido"] {
+  fill: var(--texto-2);
+  fill-opacity: .35;
+  cursor: default;
+  pointer-events: none;
+}
+
+/* ---------- Etiquetas: letra de manzana de lejos, id de lote de cerca ---------- */
+.sel-etq {
+  transition: opacity 300ms var(--curva-salida);
+}
+
+.sel-etq text,
+.sel-cota text {
+  fill: var(--crema);
+  stroke: var(--dosel);
+  stroke-opacity: .55;
+  stroke-linejoin: round;
+  paint-order: stroke;
+  text-anchor: middle;
+  dominant-baseline: central;
+  pointer-events: none;
+}
+
+.sel-etq--mz text {
+  font-family: var(--f-titulo);
+  font-weight: 300;
+  letter-spacing: .12em;
+}
+
+.sel-etq--lote text {
+  font-family: var(--f-texto);
+  font-weight: 500;
+  letter-spacing: .04em;
+  font-variant-numeric: tabular-nums;
+}
+
+.sel-etq--lote,
+.es-cerca .sel-etq--mz {
+  opacity: 0;
+}
+
+.es-cerca .sel-etq--lote {
+  opacity: 1;
+}
+
+.sel-etq text.es-oculta,
+.sel-etq text.es-tapada {
+  display: none;
+}
+
+/* ---------- Cotas (cartografia-tecnica-finca): línea de cota, remates de 4 px, medida en Barlow 11 tabular ---------- */
+.sel-cota {
+  pointer-events: none;
+}
+
+.sel-cota line {
+  stroke: var(--crema);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.sel-cota text {
+  font-family: var(--f-texto);
+  font-variant-numeric: tabular-nums;
+  stroke-opacity: .7;
+}
+
+.sel-cota__medida {
+  font-weight: 400;
+  letter-spacing: .06em;
+}
+
+.sel-cota__id {
+  font-weight: 500;
+  letter-spacing: .08em;
+}
+
+.sel-cota__area {
+  font-weight: 400;
+  letter-spacing: .04em;
+}
+
+/* ---------- Referencias: norte y escala gráfica ---------- */
+.sel__ref {
+  position: absolute;
+  z-index: 2;
+  left: 16px;
+  top: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.sel__norte {
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  color: var(--crema);
+  font-size: var(--t-cota);
+  font-weight: 500;
+  letter-spacing: .16em;
+  line-height: 1;
+}
+
+.sel__norte svg {
+  width: 10px;
+  height: 14px;
+}
+
+.sel__escala {
+  display: grid;
+  justify-items: start;
+  gap: 5px;
+  padding: 7px 12px 8px;
+  border-radius: var(--sel-radio);
+  background-color: var(--velo);
+  color: var(--texto);
+  font-size: var(--t-cota);
+  font-weight: 500;
+  letter-spacing: .08em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);   /* legibilidad sobre la foto */
+}
+
+.sel__escala i {
+  display: block;
+  height: 5px;
+  border: 1px solid currentColor;
+  border-top: 0;
+}
+
+/* ---------- Controles sobre la foto ---------- */
+.sel__pleno,
+.sel__redondo {
+  background-color: var(--velo);
+  border-color: var(--linea);
+  color: var(--texto);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+.sel__pleno {
+  position: absolute;
+  z-index: 3;
+  top: 12px;
+  right: 12px;
+  gap: 10px;
+  padding: 0 18px 0 14px;
+}
+
+.sel__zoom {
+  position: absolute;
+  z-index: 3;
+  right: 12px;
+  top: 50%;
+  translate: 0 -50%;
+  display: grid;
+  gap: 8px;
+}
+
+.sel__redondo {
+  width: 44px;
+  padding: 0;
+}
+
+@media (max-width: 599px) {
+  .sel__pleno {
+    width: 44px;
+    padding: 0;
+  }
+  .sel__pleno .b__txt {
+    display: none;
+  }
+}
+
+.sel__pleno svg,
+.sel__redondo svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
+}
+
+.sel__pleno:hover,
+.sel__redondo:hover:not([aria-disabled="true"]) {
+  background-color: var(--trazo);
+  border-color: var(--trazo);
+  color: var(--trazo-relleno-texto);
+}
+
+.sel__redondo[aria-disabled="true"] {
+  background-color: var(--velo);
+}
+
+/* Barra B7: en la página va justo bajo el render (sobre la foto taparía la fila K, que llega al 95 % del alto);
+   en pantalla completa vuelve sobre la foto y la cámara le deja holgura abajo */
+.sel__barra {
+  align-self: center;
+  max-width: 100%;
+}
+
+.sel--pleno .sel__barra {
+  position: fixed;
+  z-index: 905;
+  left: 50%;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  translate: -50% 0;
+  max-width: calc(100vw - 24px);
+}
+
+/* Aviso: la rueda sola hace scroll de la página */
+.sel__aviso,
+.sel__globo {
+  position: absolute;
+  z-index: 4;
+  margin: 0;
+  border-radius: var(--sel-radio);
+  background-color: var(--velo);
+  color: var(--texto);
+  font-size: var(--t-etiqueta);
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--dur-rapida) var(--curva-salida);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+.sel__aviso {
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  padding: 14px 22px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.sel__globo {
+  left: 0;
+  top: 0;
+  padding: 8px 12px;
+  letter-spacing: .08em;
+  font-variant-numeric: tabular-nums;
+}
+
+.sel__aviso.es-visible,
+.sel__globo.es-visible {
+  opacity: 1;
+}
+
+/* =========================================================================================
+   Lista accesible: chips por manzana (B3), buscador y listbox
+   ========================================================================================= */
+.sel__lista {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  min-height: 0;
+  padding: 16px;
+  border: 1px solid var(--linea);
+  border-radius: var(--sel-radio);
+  background-color: var(--papel);
+  transition: background-color var(--dur-tema) var(--curva-claro), border-color var(--dur-tema) var(--curva-claro);
+}
+
+.sel__filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 6px;
+}
+
+@media (max-width: 1099px) {
+  .sel__filtros {
+    flex-wrap: nowrap;
+    margin: -7px -16px;
+    padding: 7px 16px;               /* el alcance táctil de 44 px y el anillo de foco no se recortan */
+    overflow-x: auto;
+    scrollbar-width: none;
+    scroll-padding-inline: 16px;
+  }
+  .sel__filtros::-webkit-scrollbar {
+    display: none;
+  }
+  .sel__filtros .b-chip {
+    flex: none;
+  }
+}
+
+.sel__buscar {
+  position: relative;
+}
+
+.sel__buscar svg {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  translate: 0 -50%;
+  width: 18px;
+  height: 18px;
+  color: var(--texto);
+  pointer-events: none;
+}
+
+.sel__campo {
+  width: 100%;
+  height: 44px;
+  margin: 0;
+  padding: 0 16px 0 44px;
+  border: 1px solid var(--linea);
+  border-radius: var(--sel-radio);
+  background-color: transparent;
+  color: var(--texto);
+  font-family: var(--f-texto);
+  font-size: 16px;                   /* 16 px: iOS no hace zoom al enfocar */
+  font-weight: 400;
+  letter-spacing: .02em;
+  -webkit-appearance: none;
+  appearance: none;
+  transition: border-color var(--dur-rapida) var(--curva-salida);
+}
+
+.sel__campo::placeholder {
+  color: var(--texto);
+  opacity: .8;
+}
+
+.sel__campo:hover {
+  border-color: var(--texto-2);
+}
+
+.sel__campo:focus-visible {
+  border-color: var(--texto);
+}
+
+.sel__cuenta {
+  margin: 0;
+  padding: 0 4px;
+  font-size: var(--t-etiqueta);
+  font-weight: 500;
+  letter-spacing: .14em;
+  line-height: 1;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+
+.sel__opciones {
+  position: relative;               /* offsetTop de cada opción relativo a la lista */
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 0 -8px;
+  padding: 4px 8px;
+  list-style: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
+.sel__opciones:focus-visible {
+  outline: none;                    /* el anillo lo lleva la opción activa */
+}
+
+@media (max-width: 1099px) {
+  .sel__opciones {
+    max-height: min(62svh, 560px);
+  }
+}
+
+.sel__op {
+  display: grid;
+  grid-template-columns: 6px 48px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  height: 44px;
+  padding: 0 16px 0 14px;
+  border-radius: var(--sel-radio);
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  transition: background-color var(--dur-rapida) var(--curva-salida), color var(--dur-rapida) var(--curva-salida);
+}
+
+.sel__op + .sel__op {
+  margin-top: 2px;
+}
+
+.sel__op[hidden] {
+  display: none;
+}
+
+.sel__op-id {
+  font-weight: 500;
+  letter-spacing: .06em;
+}
+
+.sel__op-med {
+  overflow: hidden;
+  font-size: 13px;
+  letter-spacing: .02em;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.sel__op-area {
+  justify-self: end;
+}
+
+.sel__op:hover,
+.sel__op.es-hover {
+  background-color: var(--fondo);
+}
+
+.sel__opciones:focus-visible .sel__op.es-activo {
+  outline: 2px solid var(--foco);
+  outline-offset: -2px;
+}
+
+.sel__op[aria-selected="true"] {
+  background-color: var(--activo);
+  color: var(--activo-texto);
+}
+
+.sel__op[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
+.sel__op[aria-disabled="true"] .sel__op-id {
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.sel__vacio {
+  margin: 0;
+  padding: 8px 4px;
+  font-size: 15px;
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+/* =========================================================================================
+   Ficha del lote. Escritorio: columna derecha. Móvil: lámina inferior con asa.
+   ========================================================================================= */
+.sel__ficha {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 24px;
+  border: 1px solid var(--linea);
+  border-radius: var(--sel-radio);
+  background-color: var(--papel);
+  transition: background-color var(--dur-tema) var(--curva-claro), border-color var(--dur-tema) var(--curva-claro);
+}
+
+.sel__ficha-cab {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sel__ficha-titulo {
+  font-family: var(--f-titulo);
+  font-weight: 300;
+  font-size: 40px;
+  line-height: 1;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  text-wrap: balance;
+  font-variant-numeric: tabular-nums;
+}
+
+.sel__ficha-titulo--vacia {
+  font-size: 28px;
+  letter-spacing: .08em;
+}
+
+.sel__cerrar {
+  margin: -2px -6px 0 0;
+  border-color: var(--linea);
+}
+
+.sel__ficha-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  margin: 16px 0 0;
+  font-size: 15px;
+}
+
+.sel__ficha-meta .estado-lote,
+.sel__ficha-txt + .sel__leyenda {
+  text-transform: uppercase;
+}
+
+.sel__ficha-meta .estado-lote {
+  font-weight: 500;
+}
+
+.sel__ficha-txt {
+  margin: 14px 0 0;
+  font-size: 15px;
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+
+.sel__datos {
+  display: grid;
+  margin: 20px 0 0;
+}
+
+.sel__datos div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 13px 0;
+  border-top: 1px solid var(--linea);
+}
+
+.sel__datos div:last-child {
+  border-bottom: 1px solid var(--linea);
+}
+
+.sel__datos dt {
+  font-size: var(--t-etiqueta);
+  font-weight: 500;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.sel__datos dd {
+  margin: 0;
+  font-size: 17px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.sel__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 28px;
+  margin-top: 24px;
+}
+
+.sel__nota {
+  margin: 18px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+.sel__leyenda {
+  display: grid;
+  gap: 4px;
+  margin: 20px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--t-etiqueta);
+  font-weight: 500;
+  letter-spacing: .14em;
+}
+
+.sel__leyenda li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 32px;
+  border-bottom: 1px solid var(--linea);
+}
+
+.sel__leyenda b {
+  margin-left: auto;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Entrada de la ficha: Slide in desde la derecha + Fade (600 ms) */
+.sel__ficha-lote.entra {
+  animation: sel-entra 600ms var(--curva-claro) both;
+}
+
+@keyframes sel-entra {
+  from { opacity: 0; translate: 24px 0; }
+}
+
+.sel__asa {
+  display: none;
+  place-items: center;
+  position: sticky;
+  z-index: 1;
+  top: 0;
+  width: calc(100% + 48px);
+  height: 44px;
+  margin: 0 -24px 4px;
+  padding: 0;
+  border: 0;
+  background-color: var(--papel);
+  cursor: grab;
+  touch-action: none;
+}
+
+.sel__asa i {
+  display: block;
+  width: 40px;
+  height: 2px;
+  background-color: var(--texto-2);
+}
+
+@media (max-width: 1099px) {
+  .sel__ficha {
+    position: fixed;
+    z-index: 50;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    max-height: min(80svh, 640px);
+    padding: 0 24px calc(24px + env(safe-area-inset-bottom, 0px));
+    border-bottom: 0;
+    border-radius: var(--sel-radio) var(--sel-radio) 0 0;
+    box-shadow: var(--sombra);
+    transform: translateY(calc(100% + 24px));
+    visibility: hidden;
+    transition: transform 500ms var(--curva-claro), visibility 0s linear 500ms, background-color var(--dur-tema) var(--curva-claro);
+  }
+  .sel__ficha.es-abierta {
+    transform: none;
+    visibility: visible;
+    transition: transform 500ms var(--curva-claro), visibility 0s, background-color var(--dur-tema) var(--curva-claro);
+  }
+  .sel__ficha.es-arrastre {
+    transition: none;
+  }
+  .sel__asa {
+    display: grid;
+  }
+  .sel__ficha-vacia {
+    display: none;
+  }
+  .sel__ficha-titulo {
+    font-size: 32px;
+  }
+  /* Lámina compacta: deja a la vista el lote elegido */
+  .sel__ficha-meta {
+    margin-top: 12px;
+  }
+  .sel__datos {
+    margin-top: 14px;
+  }
+  .sel__datos div {
+    padding: 10px 0;
+  }
+  .sel__acciones {
+    margin-top: 18px;
+  }
+  .sel__nota {
+    margin-top: 12px;
+  }
+}
+
+@media (min-width: 600px) and (max-width: 1099px) {
+  .sel__ficha {
+    left: 50%;
+    right: auto;
+    width: 560px;
+    margin-left: -280px;
+  }
+}
+
+/* =========================================================================================
+   Pantalla completa: el render fijo con todos los gestos (como el render aprobado)
+   ========================================================================================= */
+.sel-pleno-abierto {
+  overflow: hidden;
+}
+
+.sel--pleno .sel__escena {
+  position: fixed;
+  z-index: 900;
+  inset: 0;
+  aspect-ratio: auto;
+  max-height: none;
+  border-radius: 0;
+}
+
+.sel--pleno .sel__lista {
+  display: none;
+}
+
+.sel--pleno .sel__ficha {
+  z-index: 910;
+}
+
+@media (min-width: 1100px) {
+  .sel--pleno .sel__ficha {
+    position: fixed;
+    left: 16px;
+    bottom: 16px;
+    width: 340px;
+    max-height: calc(100svh - 120px);
+    background-color: var(--velo);
+    box-shadow: var(--sombra);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+  }
+  .sel--pleno .sel__ficha:not(.es-abierta) {
+    display: none;
+  }
+}
+
+/* =========================================================================================
+   Solo selector.html (página de prueba fuera de la navegación)
+   ========================================================================================= */
+.sel-prueba__barra {
+  position: sticky;
+  z-index: 20;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px var(--margen);
+  border-bottom: 1px solid var(--linea);
+  background-color: var(--fondo);
+  transition: background-color var(--dur-tema) var(--curva-claro);
+}
+
+.sel-prueba__logo {
+  display: block;
+  width: 168px;
+  aspect-ratio: 956 / 204;
+  background-color: var(--texto);
+  mask: url("../marca/logo-horizontal.svg") center / contain no-repeat;
+  -webkit-mask: url("../marca/logo-horizontal.svg") center / contain no-repeat;
+}
+
+.sel-prueba__cap {
+  max-width: var(--ancho-max);
+  margin: 0 auto;
+  padding: 64px var(--margen) 0;
+}
+
+.sel-prueba__cap > .t-h2 {
+  margin-bottom: 16px;
+}
+
+.sel-prueba__cap > .t-cuerpo {
+  margin-bottom: 32px;
+}
+
+.sel-prueba__cap--fin {
+  min-height: 100vh;
+  padding-bottom: 96px;
+}

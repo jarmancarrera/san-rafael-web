@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="es" data-modo="dia">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Reservar su lote · Condominio San Rafael</title>
+<meta name="description" content="Reserve su lote en Condominio San Rafael, Paxcamán, en cinco pasos: lote, plan de pago, datos, pago y comprobante. Precios y pago de demostración.">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#192211">
+<link rel="icon" href="marca/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="marca/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="marca/favicon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@200;300;400;500&amp;family=Barlow+Semi+Condensed:wght@200;300;400&amp;display=swap">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/botones.css">
+<link rel="stylesheet" href="css/calculadora.css">
+<link rel="stylesheet" href="css/reserva.css">
+<script src="js/botones.js" defer></script>
+<script type="module" src="js/reserva.js"></script>
+</head>
+<body data-pagina="reservar">
+<a class="saltar b b-claro" href="#contenido"><span class="b__txt">Saltar al contenido</span></a>
+<p class="sr-solo" id="sr-anuncio" aria-live="polite"></p>
+
+<header class="cab">
+  <a class="cab__marca" href="index.html" aria-label="Condominio San Rafael, volver al inicio"></a>
+  <p class="nota-demo cab__demo" role="note">Precios y pago de demostración</p>
+  <button class="b b-sol b-sol--izq cab__sol" type="button" role="switch" aria-checked="false" aria-label="Modo noche" aria-describedby="hora-cab" data-control-modo><span class="b-sol__cielo" aria-hidden="true"><span class="b-sol__brazo b-sol__brazo--sol"><span class="b-sol__astro"></span></span><span class="b-sol__brazo b-sol__brazo--luna"><span class="b-sol__astro b-sol__luna"></span></span></span><span class="b-sol__hora" id="hora-cab"><span class="ico ico--check b__ok" aria-hidden="true"></span><span class="b-sol__texto"><span class="b-sol__modo" data-exito-modo>Día · </span><span data-hora>··:··</span> en Paxcamán<span data-invita hidden> · ver de noche</span></span></span></button>
+</header>
+
+<main class="reserva-pag" id="contenido" data-reserva aria-busy="true">
+  <div class="reserva-pag__cab">
+    <h1 class="reserva-pag__t">Reservar su lote</h1>
+    <ol class="pasos" aria-label="Pasos de la reserva">
+      <li><button class="b b-chip" type="button" data-ir="1"><span class="ico ico--check pasos__ok" aria-hidden="true"></span><span class="pasos__n" aria-hidden="true">1</span><span class="b__txt">Lote</span><span class="sr-solo pasos__sr"></span></button></li>
+      <li><button class="b b-chip" type="button" data-ir="2"><span class="ico ico--check pasos__ok" aria-hidden="true"></span><span class="pasos__n" aria-hidden="true">2</span><span class="b__txt">Plan</span><span class="sr-solo pasos__sr"></span></button></li>
+      <li><button class="b b-chip" type="button" data-ir="3"><span class="ico ico--check pasos__ok" aria-hidden="true"></span><span class="pasos__n" aria-hidden="true">3</span><span class="b__txt">Datos</span><span class="sr-solo pasos__sr"></span></button></li>
+      <li><button class="b b-chip" type="button" data-ir="4"><span class="ico ico--check pasos__ok" aria-hidden="true"></span><span class="pasos__n" aria-hidden="true">4</span><span class="b__txt">Pago</span><span class="sr-solo pasos__sr"></span></button></li>
+      <li><button class="b b-chip" type="button" data-ir="5"><span class="ico ico--check pasos__ok" aria-hidden="true"></span><span class="pasos__n" aria-hidden="true">5</span><span class="b__txt">Comprobante</span><span class="sr-solo pasos__sr"></span></button></li>
+    </ol>
+  </div>
+
+  <p class="reserva-pag__carga" data-carga>Cargando lotes y precios de demostración.</p>
+  <div class="reserva-pag__error" data-error-carga hidden role="alert">
+    <p>No se pudieron cargar los lotes o los precios. Revise su conexión e intente de nuevo; lo que ya escribió sigue guardado.</p>
+    <button class="b b-linea" type="button"><span class="b__txt">Reintentar</span></button>
+  </div>
+
+  <div class="reserva-pag__rejilla" data-flujo hidden>
+    <div class="reserva-pag__pasos">
+
+      <!-- 1 · Lote -->
+      <section class="paso" data-paso="1" aria-labelledby="paso-1-t">
+        <h2 class="paso__t" id="paso-1-t" tabindex="-1">Elija su lote</h2>
+        <p class="aviso" data-aviso-lote role="alert"></p>
+        <div class="ficha-lote" data-ficha-lote hidden>
+          <div class="ficha-lote__figura" data-figura></div>
+          <dl class="lista">
+            <div><dt>Lote</dt><dd data-l="id"></dd></div>
+            <div><dt>Manzana</dt><dd data-l="manzana"></dd></div>
+            <div><dt>Superficie</dt><dd><span data-l="area"></span> aprox.</dd></div>
+            <div><dt>Frente × fondo</dt><dd data-l="medidas"></dd></div>
+            <div><dt>Precio</dt><dd>Q XXX,XXX</dd></div>
+            <div><dt>Reserva</dt><dd>Q Y,YYY</dd></div>
+          </dl>
+        </div>
+        <div class="campo">
+          <label class="campo__etq" for="r-lote">Lote</label>
+          <select class="campo__select" id="r-lote" name="lote" aria-describedby="r-lote-nota r-lote-error">
+            <option value="">Elija un lote</option>
+          </select>
+          <p class="campo__nota" id="r-lote-nota">Los 145 lotes del plan maestro, por manzana. Superficie aprox., medida sobre el plano.</p>
+          <p class="campo__error" id="r-lote-error" data-error="lote"></p>
+        </div>
+        <div class="paso__acciones">
+          <button class="b b-claro" type="button" data-siguiente="2"><span class="b__txt">Continuar al plan</span></button>
+          <a class="b b-enlace" href="index.html#lotes"><span class="b__txt">Ver los lotes en el plano</span></a>
+        </div>
+      </section>
+
+      <!-- 2 · Plan -->
+      <section class="paso" data-paso="2" aria-labelledby="paso-2-t" hidden>
+        <h2 class="paso__t" id="paso-2-t" tabindex="-1">Arme su plan de pago</h2>
+        <p class="paso__intro">Mueva el enganche y el plazo. La reserva se descuenta del enganche.</p>
+        <div class="paso__calculadora" data-calculadora></div>
+        <div class="paso__acciones paso__acciones--atras">
+          <button class="b b-enlace" type="button" data-atras><span class="b__txt">Volver al lote</span></button>
+        </div>
+      </section>
+
+      <!-- 3 · Datos -->
+      <section class="paso" data-paso="3" aria-labelledby="paso-3-t" hidden>
+        <h2 class="paso__t" id="paso-3-t" tabindex="-1">Sus datos</h2>
+        <p class="paso__intro">Los usamos solo para esta reserva. Todos los campos son obligatorios.</p>
+        <form class="datos" novalidate data-form-datos>
+          <div class="campo">
+            <label class="campo__etq" for="r-nombre">Nombre completo</label>
+            <input class="campo__entrada" id="r-nombre" name="nombre" type="text" autocomplete="name" maxlength="80" required aria-describedby="r-nombre-error">
+            <p class="campo__error" id="r-nombre-error" data-error="nombre"></p>
+          </div>
+          <div class="campo">
+            <label class="campo__etq" for="r-correo">Correo electrónico</label>
+            <input class="campo__entrada" id="r-correo" name="correo" type="email" autocomplete="email" inputmode="email" maxlength="120" spellcheck="false" required aria-describedby="r-correo-nota r-correo-error">
+            <p class="campo__nota" id="r-correo-nota">Para enviarle el comprobante. En esta demostración no se envía ningún correo.</p>
+            <p class="campo__error" id="r-correo-error" data-error="correo"></p>
+          </div>
+          <div class="campo">
+            <label class="campo__etq" for="r-telefono">Teléfono</label>
+            <input class="campo__entrada" id="r-telefono" name="telefono" type="tel" autocomplete="tel" inputmode="tel" maxlength="20" required aria-describedby="r-telefono-nota r-telefono-error">
+            <p class="campo__nota" id="r-telefono-nota">De Guatemala: 8 dígitos, con o sin +502.</p>
+            <p class="campo__error" id="r-telefono-error" data-error="telefono"></p>
+          </div>
+          <div class="campo campo--marca">
+            <input class="campo__marca" id="r-privacidad" name="privacidad" type="checkbox" required aria-describedby="r-privacidad-error">
+            <label for="r-privacidad">Acepto el <a href="privacidad.html" target="_blank" rel="noopener">aviso de privacidad</a> (se abre en otra pestaña).</label>
+            <p class="campo__error" id="r-privacidad-error" data-error="privacidad"></p>
+          </div>
+          <div class="paso__acciones">
+            <button class="b b-claro" type="submit"><span class="b__txt">Continuar al pago</span></button>
+            <button class="b b-enlace" type="button" data-atras><span class="b__txt">Volver al plan</span></button>
+          </div>
+          <p class="campo__estado" role="status" data-estado-datos></p>
+        </form>
+      </section>
+
+      <!-- 4 · Pago -->
+      <section class="paso" data-paso="4" aria-labelledby="paso-4-t" hidden>
+        <h2 class="paso__t" id="paso-4-t" tabindex="-1">Pague la reserva del lote <span data-pago-lote></span></h2>
+        <p class="paso__intro">La reserva aparta el lote y se descuenta del enganche. Aquí el pago es una simulación.</p>
+        <div data-pasarela></div>
+        <div class="paso__acciones paso__acciones--atras">
+          <button class="b b-enlace" type="button" data-atras><span class="b__txt">Volver a sus datos</span></button>
+        </div>
+      </section>
+
+      <!-- 5 · Comprobante -->
+      <section class="paso paso--fin" data-paso="5" aria-labelledby="paso-5-t" hidden>
+        <h2 class="paso__t" id="paso-5-t" tabindex="-1"><span class="ico ico--check" aria-hidden="true"></span>Reserva confirmada</h2>
+        <dl class="fin__numero">
+          <dt>Número de reserva</dt>
+          <dd data-numero-reserva></dd>
+        </dl>
+        <p class="nota-demo fin__demo">Comprobante de demostración, sin validez</p>
+        <p class="aviso" data-sin-copia hidden>Esta pestaña ya no tiene la copia del comprobante. Haga una reserva nueva para generar otro.</p>
+        <h3 class="fin__sub">Qué sigue</h3>
+        <ol class="fin__sigue">
+          <li>Guarde o imprima su comprobante.</li>
+          <li>Un asesor le contactaría para los siguientes pasos. Canal de ventas: <span class="faltante">[FALTANTE]</span></li>
+          <li>El resto del enganche se paga al firmar; la reserva ya está descontada.</li>
+        </ol>
+        <div class="paso__acciones">
+          <a class="b b-claro" href="comprobante.html" data-ver-comprobante><span class="b__txt">Ver e imprimir el comprobante</span></a>
+          <button class="b b-linea" type="button" data-descargar><span class="b__txt">Descargar comprobante</span></button>
+          <button class="b b-enlace" type="button" data-otra><span class="b__txt">Reservar otro lote</span></button>
+        </div>
+      </section>
+    </div>
+
+    <!-- Resumen persistente: a un lado en escritorio, abajo en móvil -->
+    <aside class="resumen" data-resumen aria-labelledby="resumen-t">
+      <button class="b b-enlace resumen__abrir" type="button" aria-expanded="false" aria-controls="resumen-cuerpo" data-resumen-abrir><span class="b__txt" data-resumen-corto>Su reserva</span><span class="sr-solo"> · ver resumen</span></button>
+      <div class="resumen__cuerpo" id="resumen-cuerpo">
+        <h2 class="resumen__t" id="resumen-t">Su reserva</h2>
+        <div class="resumen__figura" data-resumen-figura></div>
+        <dl class="lista lista--resumen">
+          <div><dt>Lote</dt><dd data-r="lote">Sin elegir</dd></div>
+          <div><dt>Superficie</dt><dd data-r="area">Sin elegir</dd></div>
+          <div><dt>Precio</dt><dd data-r="precio">Q XXX,XXX</dd></div>
+          <div><dt>Enganche</dt><dd data-r="enganche">XX %</dd></div>
+          <div><dt>Plazo</dt><dd data-r="plazo">Sin plan</dd></div>
+          <div><dt>Cuota</dt><dd data-r="cuota">Q Z,ZZZ/mes</dd></div>
+          <div><dt>Reserva</dt><dd data-r="reserva">Q Y,YYY</dd></div>
+        </dl>
+        <p class="nota-demo resumen__demo">Valores de demostración</p>
+      </div>
+    </aside>
+  </div>
+</main>
+</body>
+</html>

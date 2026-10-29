@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /comprobante.html
+
+Sitemap: https://jarmancarrera.github.io/san-rafael-web/sitemap.xml

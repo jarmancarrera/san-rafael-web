@@ -1,0 +1,911 @@
+/* San Rafael v2 · reserva.css (PLAN-v2 §11 y §12, constructor C). Requiere base.css y botones.css.
+   reservar.html (5 pasos, resumen a un lado en escritorio y abajo en móvil) y comprobante.html (vista imprimible).
+   Solo tokens de base.css; los translúcidos se mezclan con color-mix sobre un token. Paneles de papel con radio de
+   2 px, como el selector. Ninguna forma propia de botón: los controles son .b, .b-claro, .b-linea, .b-chip y .b-enlace. */
+
+.reserva-pag,
+.comprobante-pag {
+  --r-radio: 2px;
+  --resumen-alto: 0px;
+}
+
+/* La nota de demostración: tipografía de etiqueta. :where() deja que un estilo global de .nota-demo mande. */
+:where(.nota-demo) {
+  margin: 0;
+  font-family: var(--f-texto);
+  font-weight: 500;
+  font-size: var(--t-etiqueta);
+  line-height: 1.3;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+body {
+  background-color: var(--fondo);
+  color: var(--texto);
+}
+
+.saltar {
+  position: fixed;
+  z-index: 60;
+  left: 16px;
+  top: -72px;
+}
+
+.saltar:focus-visible {
+  top: 16px;
+}
+
+/* ---------- Cabecera ---------- */
+.cab {
+  position: sticky;
+  z-index: 30;
+  top: 0;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 64px;
+  padding: env(safe-area-inset-top, 0px) var(--margen) 0;
+  border-bottom: 1px solid var(--linea);
+  background-color: var(--fondo);
+  color: var(--trazo);
+  transition: background-color var(--dur-tema) var(--curva-claro), border-color var(--dur-tema) var(--curva-claro);
+}
+
+.cab__marca {
+  display: block;
+  flex: none;
+  width: clamp(132px, 14vw, 180px);
+  height: 44px;
+  margin-right: auto;
+  background-color: var(--trazo);
+  mask: url("../marca/logo-horizontal.svg") left center / contain no-repeat;
+  -webkit-mask: url("../marca/logo-horizontal.svg") left center / contain no-repeat;
+}
+
+.cab__demo {
+  color: var(--texto);
+  text-align: right;
+}
+
+@media (max-width: 599.98px) {
+  .cab__demo { max-width: 15ch; }
+}
+
+/* ---------- Página de reserva ---------- */
+.reserva-pag {
+  max-width: var(--ancho-max);
+  margin-inline: auto;
+  padding: 40px var(--margen) 96px;
+}
+
+.reserva-pag__cab {
+  display: grid;
+  gap: 20px;
+  margin-bottom: 32px;
+}
+
+@media (min-width: 1100px) {
+  .reserva-pag__cab {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: end;
+    column-gap: 48px;
+  }
+}
+
+.reserva-pag__t {
+  font-family: var(--f-titulo);
+  font-weight: 300;
+  font-size: clamp(32px, 4.4vw, 60px);
+  line-height: 1.02;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--trazo);
+  margin-right: -.08em;
+}
+
+.reserva-pag__carga {
+  margin: 0;
+  padding: 48px 24px;
+  border: 1px dashed var(--inactivo-trazo);
+  border-radius: var(--r-radio);
+  text-align: center;
+  font-size: 16px;
+}
+
+.reserva-pag__error {
+  display: grid;
+  justify-items: start;
+  gap: 16px;
+  padding: 32px;
+  border: 1px dashed var(--texto);
+  border-radius: var(--r-radio);
+}
+
+.reserva-pag__error[hidden] {
+  display: none;
+}
+
+/* ---------- Indicador de pasos ---------- */
+.pasos {
+  display: flex;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 2px;
+  list-style: none;
+  overflow-x: auto;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+}
+
+.pasos::-webkit-scrollbar {
+  display: none;
+}
+
+@media (min-width: 1100px) {
+  .pasos { justify-content: flex-end; }
+}
+
+.pasos li {
+  flex: none;
+}
+
+.pasos .b-chip {
+  gap: 8px;
+}
+
+.pasos__n {
+  font-variant-numeric: tabular-nums;
+}
+
+.pasos__ok {
+  display: none;
+  width: 12px;
+  height: 12px;
+}
+
+.pasos .b-chip[data-hecho] .pasos__ok {
+  display: inline-block;
+}
+
+.pasos .b-chip[data-hecho] .pasos__n {
+  display: none;
+}
+
+/* Paso actual: los mismos roles que un chip activo (botones.css), aquí con aria-current */
+.pasos .b-chip[aria-current="step"] {
+  background-color: var(--activo);
+  border-color: var(--activo);
+  color: var(--activo-texto);
+}
+
+/* ---------- Rejilla: pasos + resumen ---------- */
+.reserva-pag__rejilla {
+  display: grid;
+  gap: 32px;
+  align-items: start;
+}
+
+.reserva-pag__rejilla[hidden] {
+  display: none;
+}
+
+@media (min-width: 1100px) {
+  .reserva-pag__rejilla {
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 48px;
+  }
+}
+
+.reserva-pag__pasos {
+  min-width: 0;
+}
+
+.paso[hidden] {
+  display: none;
+}
+
+.paso__t {
+  margin: 0 0 12px;
+  font-family: var(--f-titulo);
+  font-weight: 300;
+  font-size: clamp(26px, 3vw, 40px);
+  line-height: 1.1;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--trazo);
+  scroll-margin-top: 96px;
+}
+
+.paso__t:focus {
+  outline: none;
+}
+
+.paso__t:focus-visible {
+  outline: 2px solid var(--foco);
+  outline-offset: 6px;
+}
+
+.paso__t .ico {
+  width: 28px;
+  height: 28px;
+  margin-right: 12px;
+  vertical-align: -3px;
+  color: var(--madera);
+}
+
+.paso__intro {
+  max-width: 64ch;
+  margin: 0 0 28px;
+}
+
+.paso__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px 24px;
+  margin-top: 32px;
+}
+
+.paso__acciones--atras {
+  margin-top: 24px;
+}
+
+/* La calculadora se adapta al ancho de su columna, no al de la ventana */
+.paso__calculadora {
+  container-type: inline-size;
+}
+
+@container (max-width: 759px) {
+  .paso__calculadora .cal { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* En la reserva, el resumen de abajo ya muestra la cuota: el resumen fijo de la calculadora sobra */
+.paso__calculadora .cal-fijo {
+  display: none !important;
+}
+
+.aviso {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 20px;
+  font-weight: 500;
+}
+
+.aviso:empty,
+.aviso[hidden] {
+  display: none;
+}
+
+.aviso::before,
+.campo__error::before {
+  content: "";
+  flex: none;
+  width: 14px;
+  height: 14px;
+  translate: 0 2px;
+  background-color: currentColor;
+  mask: url("../img/iconos/cerrar.svg") center / contain no-repeat;
+  -webkit-mask: url("../img/iconos/cerrar.svg") center / contain no-repeat;
+}
+
+/* ---------- Lote ---------- */
+.ficha-lote {
+  display: grid;
+  gap: 8px 32px;
+  align-items: center;
+  margin-bottom: 32px;
+  padding: clamp(20px, 3vw, 32px);
+  border: 1px solid var(--linea);
+  border-radius: var(--r-radio);
+  background-color: var(--papel);
+}
+
+.ficha-lote[hidden] {
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .ficha-lote { grid-template-columns: minmax(180px, 260px) minmax(0, 1fr); }
+}
+
+.ficha-lote__figura {
+  max-width: 260px;
+  margin-inline: auto;
+  width: 100%;
+}
+
+.figura-lote {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.figura-lote__poligono {
+  fill: color-mix(in srgb, var(--madera) 22%, transparent);
+  stroke: var(--madera);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+
+.figura-lote__id {
+  font-family: var(--f-texto);
+  font-weight: 500;
+  font-size: 13px;
+  letter-spacing: .06em;
+  fill: var(--trazo);
+}
+
+.cota line {
+  stroke: var(--texto);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.cota .cota__ext {
+  stroke-opacity: .5;
+}
+
+.cota__txt {
+  font-family: var(--f-texto);
+  font-size: 11px;
+  letter-spacing: .06em;
+  font-variant-numeric: tabular-nums;
+  fill: var(--texto);
+}
+
+.lista {
+  margin: 0;
+}
+
+.lista > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--linea);
+}
+
+.lista dt {
+  font-size: 15px;
+}
+
+.lista dd {
+  margin: 0;
+  text-align: right;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Campos ---------- */
+.campo {
+  margin: 0 0 28px;
+  max-width: 560px;
+}
+
+.campo__etq {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: 500;
+  font-size: var(--t-etiqueta);
+  letter-spacing: .18em;
+  text-transform: uppercase;
+}
+
+.campo__entrada,
+.campo__select {
+  display: block;
+  width: 100%;
+  min-height: 48px;
+  margin: 0;
+  padding: 6px 0;
+  border: 0;
+  border-bottom: 1px solid var(--texto-2);
+  border-radius: 0;
+  background-color: transparent;
+  color: var(--texto);
+  font-family: var(--f-texto);
+  font-weight: 400;
+  font-size: 18px;
+  transition: border-color var(--dur-rapida) var(--curva-salida);
+}
+
+.campo__select {
+  cursor: pointer;
+}
+
+.campo__select option,
+.campo__select optgroup {
+  background-color: var(--papel);
+  color: var(--texto);
+}
+
+.campo__entrada:hover,
+.campo__select:hover {
+  border-bottom-color: var(--texto);
+}
+
+.campo__entrada:focus,
+.campo__select:focus {
+  border-bottom-color: var(--trazo);
+}
+
+.campo__entrada[aria-invalid="true"],
+.campo__select[aria-invalid="true"] {
+  border-bottom: 2px solid var(--texto);
+}
+
+.campo__nota,
+.campo__error,
+.campo__estado {
+  margin: 8px 0 0;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.campo__nota:empty,
+.campo__error:empty,
+.campo__estado:empty {
+  display: none;
+}
+
+.campo__error {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-weight: 500;
+}
+
+.campo--marca {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 4px 12px;
+  align-items: start;
+}
+
+.campo--marca label {
+  padding-top: 1px;
+  font-size: 16px;
+}
+
+.campo--marca .campo__error {
+  grid-column: 1 / -1;
+}
+
+.campo__marca {
+  width: 22px;
+  height: 22px;
+  margin: 2px 0 0;
+  accent-color: var(--trazo);
+  cursor: pointer;
+}
+
+.campo__marca[aria-invalid="true"] {
+  outline: 2px solid var(--texto);
+  outline-offset: 2px;
+}
+
+/* ---------- Pasarela de demostración ---------- */
+.pasarela {
+  padding: clamp(20px, 3vw, 36px);
+  border: 1px solid var(--linea);
+  border-radius: var(--r-radio);
+  background-color: var(--papel);
+  max-width: 720px;
+}
+
+.pasarela__cab {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px dashed var(--inactivo-trazo);
+}
+
+.pasarela__titulo {
+  margin: 0;
+  font-family: var(--f-texto);
+  font-weight: 400;
+  font-size: var(--t-h3);
+  line-height: 1.2;
+  color: var(--trazo);
+}
+
+.pasarela__datos {
+  margin: 8px 0 0;
+}
+
+.pasarela__datos > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--linea);
+}
+
+.pasarela__datos dt {
+  font-size: 15px;
+}
+
+.pasarela__datos dd {
+  margin: 0;
+  min-width: 0;
+  text-align: right;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.pasarela__nota {
+  margin: 20px 0 0;
+}
+
+.pasarela__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.pasarela__alerta:empty {
+  display: none;
+}
+
+.pasarela__rechazo {
+  margin-top: 24px;
+  padding: 20px;
+  border: 1px dashed var(--texto);
+  border-radius: var(--r-radio);
+}
+
+.pasarela__rechazo p {
+  margin: 8px 0 0;
+}
+
+.pasarela__rechazo .b {
+  margin-top: 16px;
+}
+
+.pasarela__rechazo-t {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-weight: 500;
+  font-size: 18px;
+}
+
+.pasarela__rechazo-t .ico {
+  width: 18px;
+  height: 18px;
+}
+
+/* ---------- Fin ---------- */
+.fin__numero {
+  margin: 24px 0 8px;
+}
+
+.fin__numero dt {
+  font-weight: 500;
+  font-size: var(--t-etiqueta);
+  letter-spacing: .18em;
+  text-transform: uppercase;
+}
+
+.fin__numero dd {
+  margin: 8px 0 0;
+  font-weight: 200;
+  font-size: clamp(30px, 5vw, 56px);
+  line-height: 1.05;
+  letter-spacing: .02em;
+  color: var(--trazo);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.fin__demo {
+  margin-bottom: 32px;
+  padding: 8px 0;
+  border-top: 1px dashed var(--inactivo-trazo);
+  border-bottom: 1px dashed var(--inactivo-trazo);
+}
+
+.fin__sub {
+  margin: 0 0 12px;
+  font-weight: 500;
+  font-size: var(--t-etiqueta);
+  letter-spacing: .18em;
+  text-transform: uppercase;
+}
+
+.fin__sigue {
+  max-width: 64ch;
+  margin: 0;
+  padding-left: 1.3em;
+}
+
+.fin__sigue li + li {
+  margin-top: 8px;
+}
+
+.faltante {
+  font-weight: 500;
+  border-bottom: 1px dashed var(--inactivo-trazo);
+}
+
+/* ---------- Resumen persistente ---------- */
+.resumen__t {
+  margin: 0 0 12px;
+  font-weight: 500;
+  font-size: var(--t-etiqueta);
+  letter-spacing: .18em;
+  text-transform: uppercase;
+}
+
+.resumen__figura {
+  max-width: 180px;
+  margin: 0 auto 8px;
+}
+
+.resumen__figura:empty {
+  display: none;
+}
+
+.resumen__demo {
+  margin-top: 16px;
+}
+
+@media (min-width: 1100px) {
+  .resumen {
+    position: sticky;
+    top: 96px;
+    padding: 24px;
+    border: 1px solid var(--linea);
+    border-radius: var(--r-radio);
+    background-color: var(--papel);
+  }
+
+  .resumen__abrir {
+    display: none;
+  }
+}
+
+/* Móvil: barra fija abajo, en la zona del pulgar; se abre hacia arriba */
+@media (max-width: 1099.98px) {
+  .reserva-pag {
+    --resumen-alto: 64px;
+    padding-bottom: calc(var(--resumen-alto) + 48px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .resumen {
+    position: fixed;
+    z-index: 35;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column-reverse;
+    padding: 8px var(--margen) calc(8px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--linea);
+    background-color: var(--velo);
+    box-shadow: var(--sombra);
+  }
+
+  .resumen__abrir {
+    align-self: stretch;
+    justify-content: space-between;
+    margin-inline: 0;
+    padding-inline: 0;
+  }
+
+  .resumen__abrir::after {
+    content: "";
+    width: 16px;
+    height: 16px;
+    background-color: currentColor;
+    mask: url("../img/iconos/flecha.svg") center / contain no-repeat;
+    -webkit-mask: url("../img/iconos/flecha.svg") center / contain no-repeat;
+    rotate: -90deg;
+    transition: rotate var(--dur-media) var(--curva-salida);
+  }
+
+  .resumen__abrir[aria-expanded="true"]::after {
+    rotate: 90deg;
+  }
+
+  .resumen__cuerpo {
+    display: none;
+    max-height: min(60svh, 520px);
+    overflow-y: auto;
+    padding: 8px 0 12px;
+  }
+
+  .resumen.es-abierto .resumen__cuerpo {
+    display: block;
+  }
+
+  .resumen .lista > div {
+    padding: 8px 0;
+  }
+}
+
+/* ---------- Comprobante ---------- */
+.comprobante-pag {
+  max-width: 960px;
+  margin-inline: auto;
+  padding: 32px var(--margen) 96px;
+}
+
+.comprobante-pag__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 24px;
+  margin-bottom: 24px;
+}
+
+.comprobante-pag__acciones[hidden] {
+  display: none;
+}
+
+.comp {
+  border: 1px solid var(--linea);
+  border-radius: var(--r-radio);
+  background-color: var(--papel);
+}
+
+.comp__banda {
+  margin: 0;
+  padding: 12px clamp(20px, 3vw, 32px);
+  border-bottom: 1px dashed var(--inactivo-trazo);
+  font-weight: 500;
+  font-size: var(--t-etiqueta);
+  letter-spacing: .18em;
+  text-transform: uppercase;
+}
+
+.comp__cab,
+.comp__rejilla,
+.comp__pie {
+  padding: clamp(20px, 3vw, 32px);
+}
+
+.comp__titulo {
+  margin: 0 0 16px;
+  font-family: var(--f-titulo);
+  font-weight: 300;
+  font-size: clamp(28px, 3.6vw, 44px);
+  line-height: 1.05;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--trazo);
+}
+
+.comp__clave,
+.comp__lista {
+  margin: 0;
+}
+
+.comp__clave > div,
+.comp__lista > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--linea);
+}
+
+.comp dt {
+  font-size: 15px;
+}
+
+.comp dd {
+  margin: 0;
+  min-width: 0;
+  text-align: right;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.comp__numero {
+  color: var(--trazo);
+  letter-spacing: .02em;
+}
+
+.comp__rejilla {
+  display: grid;
+  gap: 32px;
+  border-top: 1px solid var(--linea);
+}
+
+@media (min-width: 760px) {
+  .comp__rejilla { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .comp__lote { grid-row: span 2; }
+}
+
+.comp__sub {
+  margin: 0 0 12px;
+  font-weight: 500;
+  font-size: var(--t-etiqueta);
+  letter-spacing: .18em;
+  text-transform: uppercase;
+}
+
+.comp__figura {
+  max-width: 260px;
+  margin: 0 auto 12px;
+}
+
+.comp__pie {
+  border-top: 1px solid var(--linea);
+  font-size: 14px;
+}
+
+.comp__pie p + p {
+  margin-top: 6px;
+}
+
+.vacio {
+  max-width: 64ch;
+  padding: 40px 0;
+}
+
+.vacio[hidden] {
+  display: none;
+}
+
+.vacio__t {
+  margin: 0 0 16px;
+  font-family: var(--f-titulo);
+  font-weight: 300;
+  font-size: clamp(28px, 3.6vw, 44px);
+  line-height: 1.05;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--trazo);
+}
+
+.vacio p + p {
+  margin-top: 12px;
+}
+
+/* ---------- Impresión: solo el comprobante, tinta oscura sobre papel ---------- */
+@media print {
+  .cab,
+  .saltar,
+  .comprobante-pag__acciones {
+    display: none !important;
+  }
+
+  html,
+  body,
+  .comp {
+    background: none !important;
+    color: var(--dosel) !important;
+  }
+
+  .comprobante-pag {
+    padding: 0;
+    max-width: none;
+  }
+
+  .comp,
+  .comp :is(div, p, header, footer) {
+    border-color: color-mix(in srgb, var(--dosel) 30%, transparent) !important;
+  }
+
+  .comp :is(h1, dd, dt, p, .comp__numero) {
+    color: var(--dosel) !important;
+  }
+
+  .comp__rejilla {
+    break-inside: avoid;
+  }
+}

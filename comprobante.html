@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="es" data-modo="dia">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Comprobante de reserva · Condominio San Rafael</title>
+<meta name="description" content="Comprobante de reserva de demostración de Condominio San Rafael, Paxcamán. Sin validez.">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#192211">
+<link rel="icon" href="marca/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="marca/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="marca/favicon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@200;300;400;500&amp;family=Barlow+Semi+Condensed:wght@200;300;400&amp;display=swap">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/botones.css">
+<link rel="stylesheet" href="css/reserva.css">
+<script src="js/botones.js" defer></script>
+<script type="module" src="js/pagos/comprobante.js"></script>
+</head>
+<body data-pagina="comprobante">
+<a class="saltar b b-claro" href="#contenido"><span class="b__txt">Saltar al contenido</span></a>
+<p class="sr-solo" id="sr-anuncio" aria-live="polite"></p>
+
+<header class="cab">
+  <a class="cab__marca" href="index.html" aria-label="Condominio San Rafael, volver al inicio"></a>
+  <p class="nota-demo cab__demo" role="note">Comprobante de demostración</p>
+  <button class="b b-sol b-sol--izq cab__sol" type="button" role="switch" aria-checked="false" aria-label="Modo noche" aria-describedby="hora-cab" data-control-modo><span class="b-sol__cielo" aria-hidden="true"><span class="b-sol__brazo b-sol__brazo--sol"><span class="b-sol__astro"></span></span><span class="b-sol__brazo b-sol__brazo--luna"><span class="b-sol__astro b-sol__luna"></span></span></span><span class="b-sol__hora" id="hora-cab"><span class="ico ico--check b__ok" aria-hidden="true"></span><span class="b-sol__texto"><span class="b-sol__modo" data-exito-modo>Día · </span><span data-hora>··:··</span> en Paxcamán<span data-invita hidden> · ver de noche</span></span></span></button>
+</header>
+
+<main class="comprobante-pag" id="contenido">
+  <div class="comprobante-pag__acciones" data-comprobante-acciones hidden>
+    <button class="b b-claro" type="button" data-descargar><span class="b__txt">Descargar comprobante</span></button>
+    <button class="b b-linea" type="button" data-imprimir><span class="b__txt">Imprimir</span></button>
+    <a class="b b-enlace" href="index.html"><span class="b__txt">Volver al inicio</span></a>
+  </div>
+
+  <div class="comprobante-pag__doc" data-comprobante aria-busy="true">
+    <p class="reserva-pag__carga">Cargando el comprobante.</p>
+  </div>
+
+  <section class="vacio" data-comprobante-vacio aria-labelledby="vacio-t" hidden>
+    <h1 class="vacio__t" id="vacio-t">No encontramos este comprobante</h1>
+    <p data-motivo></p>
+    <p>Los comprobantes de demostración se guardan solo en la pestaña donde se hizo la reserva, mientras dure la visita. Si la cerró o abrió el enlace en otra, haga una reserva nueva.</p>
+    <div class="paso__acciones">
+      <a class="b b-claro" href="reservar.html"><span class="b__txt">Reservar un lote</span></a>
+      <a class="b b-enlace" href="index.html"><span class="b__txt">Volver al inicio</span></a>
+    </div>
+  </section>
+</main>
+</body>
+</html>
