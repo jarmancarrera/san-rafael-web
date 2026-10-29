@@ -89,9 +89,16 @@ body {
   --trazo-relleno-texto: var(--dosel);
   --foco: var(--madera);
   --linea: rgba(240, 237, 227, .18);
+  --texto: var(--crema);
+  --texto-2: color-mix(in srgb, var(--crema) 88%, transparent);
   background-color: transparent;
   border-bottom-color: transparent;
   color: var(--crema);
+}
+
+/* La nota de precios debe leerse sobre el follaje claro del día */
+.nav[data-sobre="foto"] .nota-demo {
+  text-shadow: 0 1px 10px color-mix(in srgb, var(--dosel) 85%, transparent);
 }
 
 .nav__marca {
@@ -1672,7 +1679,7 @@ html:is(.sel-pleno-abierto, :has(.sel__ficha.es-abierta)) .barra-movil {
 :is(.foto-marco, .pilar__foto, .lugar__foto)::after {
   background-image:
     radial-gradient(ellipse 75% 70% at 50% 45%, transparent 45%, color-mix(in srgb, var(--dosel) 70%, transparent) 100%),
-    linear-gradient(color-mix(in srgb, var(--dosel) 42%, transparent), color-mix(in srgb, var(--dosel) 42%, transparent));
+    linear-gradient(color-mix(in srgb, var(--dosel) 55%, transparent), color-mix(in srgb, var(--dosel) 55%, transparent));
 }
 
 [data-modo="noche"] :is(.foto-marco, .pilar__foto, .lugar__foto)::before { opacity: .12; }

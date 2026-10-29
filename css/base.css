@@ -272,14 +272,9 @@ button {
   font-variant-numeric: tabular-nums;
 }
 
-/* ---------- Fotografía: de noche baja la exposición, no cambia la foto (PLAN-v2 §5.4) ---------- */
-.foto {
-  transition: filter var(--dur-foto) var(--curva-claro);
-}
-
-[data-modo="noche"] .foto {
-  filter: brightness(.78) contrast(1.06) saturate(.85);
-}
+/* ---------- Fotografía: de noche baja la exposición, no cambia la foto (PLAN-v2 §5.4) ----------
+   Con un velo de opacidad sobre la foto (pagina.css, velo de las fotos), no con filter: un filtro sobre
+   fotos grandes se vuelve a dibujar en cada cuadro del cambio de modo y del scroll en el teléfono. */
 
 /* ---------- Utilidades ---------- */
 .sr-solo {
